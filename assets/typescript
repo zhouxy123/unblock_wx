@@ -1,0 +1,60 @@
+Script started on Fri Jun 21 21:19:32 2024
+[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/unblock_2d/assets]1;..ock_2d/assets]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/unblock_2d/assets\[0m[27m[24m[J(base) [01;32m➜  [36massets[00m [K[?1h=[?2004h[0m[27m[24m[J(base) [01;32m➜  [36massets[00m [01;34mgit:([31mmain[34m) [33m✗[00m [KScripts[?1l>[?2004l
+]2;Scripts]1;Scripts[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/unblock_2d/assets/Scripts]1;..ssets/Scripts]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/unblock_2d/assets/Scripts\[0m[27m[24m[J(base) [01;32m➜  [36mScripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004hlls[?1l>[?2004l
+]2;ls -G]1;lsDrag.ts                  GameManager.ts           PlayerController.ts
+Drag.ts.meta             GameManager.ts.meta      PlayerController.ts.meta
+[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/unblock_2d/assets/Scripts]1;..ssets/Scripts]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/unblock_2d/assets/Scripts\[0m[27m[24m[J(base) [01;32m➜  [36mScripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004hnnp,m  m init -y[?1l>[?2004l
+]2;npm init -y]1;npm[1G[0KWrote to /Users/zhouxy/Desktop/unblock_2d/assets/Scripts/package.json:
+
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
+
+
+
+[1G[0K⠙[1G[0K[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/unblock_2d/assets/Scripts]1;..ssets/Scripts]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/unblock_2d/assets/Scripts\[0m[27m[24m[J(base) [01;32m➜  [36mScripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004hnnpm install % @types/node[?1l>[?2004l
+]2;npm install @types/node]1;npm[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K
+added 2 packages, and audited 3 packages in 1s
+[1G[0K⠧[1G[0K
+found [32m[1m0[22m[39m vulnerabilities
+[1G[0K⠧[1G[0K[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/unblock_2d/assets/Scripts]1;..ssets/Scripts]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/unblock_2d/assets/Scripts\[0m[27m[24m[J(base) [01;32m➜  [36mScripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004hccd[?1l>[?2004l
+]2;cd]1;cd[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~]1;~]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy\[0m[27m[24m[J(base) [01;32m➜  [36m~[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J(base) [01;32m➜  [36m~[00m [Kccd Desktop[1m/[0m[0m/cs/ts_file[1m/[0m[0m [?1l>[?2004l
+]2;cd Desktop/cs/ts_file]1;cd[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/cs/ts_file]1;..op/cs/ts_file]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/cs/ts_file\[0m[27m[24m[J(base) [01;32m➜  [36mts_file[00m [K[?1h=[?2004hnnpm init -y[?1l>[?2004l
+]2;npm init -y]1;npm[1G[0KWrote to /Users/zhouxy/Desktop/cs/ts_file/package.json:
+
+{
+  "name": "ts_file",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
+
+
+
+[1G[0K⠙[1G[0K[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/cs/ts_file]1;..op/cs/ts_file]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/cs/ts_file\[0m[27m[24m[J(base) [01;32m➜  [36mts_file[00m [K[?1h=[?2004hnnp,m  m install @types. /node[?1l>[?2004l
+]2;npm install @types/node]1;npm[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K
+added 2 packages, and audited 3 packages in 6s
+[1G[0K⠙[1G[0K
+found [32m[1m0[22m[39m vulnerabilities
+[1G[0K⠙[1G[0K[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/cs/ts_file]1;..op/cs/ts_file]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/cs/ts_file\[0m[27m[24m[J(base) [01;32m➜  [36mts_file[00m [K[?1h=[?2004h[7mnpm install --save-dev @types/node[27m[34D[27mn[27mp[27mm[27m [27mi[27mn[27ms[27mt[27ma[27ml[27ml[27m [27m-[27m-[27ms[27ma[27mv[27me[27m-[27md[27me[27mv[27m [27m@[27mt[27my[27mp[27me[27ms[27m/[27mn[27mo[27md[27me[?1l>[?2004l
+]2;npm install --save-dev @types/node]1;npm[1G[0K⠙[1G[0K[1mnpm[22m [33mwarn[39m [94midealTree[39m Removing dependencies.@types/node in favor of devDependencies.@types/node
+[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K
+up to date, audited 3 packages in 1s
+[1G[0K⠦[1G[0K
+found [32m[1m0[22m[39m vulnerabilities
+[1G[0K⠦[1G[0K[1m[7m%[27m[1m[0m                                                                                ]2;zhouxy@zhouxydeMacBook-Pro:~/Desktop/cs/ts_file]1;..op/cs/ts_file]7;file://zhouxydeMacBook-Pro.local/Users/zhouxy/Desktop/cs/ts_file\[0m[27m[24m[J(base) [01;32m➜  [36mts_file[00m [K[?1h=[?2004h
