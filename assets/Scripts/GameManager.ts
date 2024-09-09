@@ -1,17 +1,41 @@
-import { _decorator, Component, instantiate, Node, Prefab, TextAsset } from 'cc';
+import { _decorator, Component, instantiate, Label, Node, Prefab, TextAsset, Scene, sys } from 'cc';
+
 const { ccclass, property } = _decorator;
 
+enum GameState {
+    STATE_INIT,
+    STATE_PLAYING,
+    STATE_END,
+};
+
 let blocks: number[][] = [];
-let total_state: number[][] = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]];
+let total_state: number[][] = 
+    [[0,0,0,0,0,0],
+    [0,0,0,0,0,0],
+    [0,0,0,0,0,0],
+    [0,0,0,0,0,0],
+    [0,0,0,0,0,0],
+    [0,0,0,0,0,0]];
 let block_state: number[][] = [];
 let abs_coords: number[][] = [];
+let victory: number = 0;
+let level_id = 1;
+let steps : number = 0;
+let if_first: number = 1; // 是否刚进入游戏？是：加载进度
 
-const LEVEL_ID: number = 3; 
-const BLOCK_SIZE: number = 80;
+// const LEVEL_ID: number = 3; 
+const BLOCK_SIZE: number = 160;
+const LEFT_BORDER: number = 130;
+const UP_BORDER: number = 850;
+
 window["blocks"] = blocks; // 目的：把blocks弄成全局变量
 window["total_state"] = total_state;
 window["block_state"] = block_state;
 window["abs_coords"] = abs_coords;
+window["victory"] = victory;
+window["steps"] = steps;
+window["id"] = level_id;
+window["game_process"] = 1;
 
 @ccclass('GameManager')
 export class GameManager extends Component {
@@ -32,132 +56,239 @@ export class GameManager extends Component {
     @property({type: Prefab})
     public colBlock3: Prefab|null = null;
 
+    @property({ type: Node })
+    public victoryMenu: Node | null = null;
+
+    @property({ type: Label })
+    public levelLabel: Label | null = null;
+
+    @property({ type: Label })
+    public stepLabel: Label | null = null;
+
+    @property({ type: Node })
+    public chooseLevel: Node | null = null;
+
     // 声明属性 ‘itemGiftText‘ 的类型为 TextAsset
     @property(TextAsset)
     itemGiftText: TextAsset = null!;
 
-    
+    @property(TextAsset)
+    processText: TextAsset = null!;
 
     start() {
-        this.generate(LEVEL_ID);
+        this.setCurState(GameState.STATE_INIT);
+    }
+
+    init() {
+        if(if_first == 1) {
+            this.getProcess();
+            if_first = 0;
+        }
+
+        if(this.victoryMenu) {
+            this.victoryMenu.active = false;
+        } // 初始化不显示胜利界面
+
+        if(this.levelLabel) {
+            this.levelLabel.string = "Level " + window["id"];
+        }
+
+        if(this.stepLabel) {
+            this.stepLabel.string = "Steps: 0";
+        }
+
+        victory = 0;
+        window["steps"] = 0;
+
+        this.generate(window["id"]);
+        // level_id = level_id % 1000 + 1;
+        console.log(window["blocks"]);
+        this.setCurState(GameState.STATE_PLAYING);
     }
 
     update(deltaTime: number) {
-        
+        if(window["victory"] == 1)
+        {
+            this.setCurState(GameState.STATE_END);
+            if(this.victoryMenu) {
+                this.victoryMenu.active = true;
+            }
+        }
+
+        if(this.stepLabel) {
+            this.stepLabel.string = "Steps: " + window["steps"];
+        }
+
+        if(window["new_level"] != 0)
+        {
+            window["id"] = window["new_level"];
+            this.setCurState(GameState.STATE_INIT);
+            if(this.chooseLevel) {
+                this.chooseLevel.active = false;
+            }
+            window["new_level"] = 0;
+
+        }
+    }
+
+    setCurState(value: GameState) {
+        switch(value) {
+            case GameState.STATE_INIT:
+                this.init();
+                break;
+            case GameState.STATE_PLAYING:  
+                //this.checkVictory();
+                break;
+            case GameState.STATE_END:
+                // 待添加：点击next level按钮，进入init状态
+                break;
+        }
+    }
+
+    getProcess() {
+        if(sys.localStorage.getItem('game_process') >= 1)
+        {
+            window["game_process"] = sys.localStorage.getItem('game_process');
+        }
+        window["id"] = window["game_process"];
+        console.log("level id = " + window["id"]);
     }
 
     generate(level: number) {
         const data: string = this.itemGiftText.text;
         let i = 0;
-        let j = (level - 1) * 60;
+        let j = (level - 1) * 64;
+
+        this.node.destroyAllChildren();
+
+        window["blocks"] = [];
+        window["block_state"] = [];
+        window["abs_coords"] = [];
+        window["total_state"] = 
+            [[0,0,0,0,0,0],
+            [0,0,0,0,0,0],
+            [0,0,0,0,0,0],
+            [0,0,0,0,0,0],
+            [0,0,0,0,0,0],
+            [0,0,0,0,0,0]];
+        window["victory"] = 0;
+
         while(data[j] != '*') {
-            blocks[i] = [];
-            blocks[i][0] = parseInt(data[j]);   // x
-            blocks[i][1] = parseInt(data[j + 1]);   // y
-            blocks[i][2] = parseInt(data[j + 2]);   // block length
-            blocks[i][3] = parseInt(data[j + 3]);   // block direction
+            window["blocks"][i] = [];
+            window["blocks"][i][0] = parseInt(data[j]);   // x
+            window["blocks"][i][1] = parseInt(data[j + 1]);   // y
+            window["blocks"][i][2] = parseInt(data[j + 2]);   // block length
+            window["blocks"][i][3] = parseInt(data[j + 3]);   // block direction
 
-            block_state[i] = [];
+            window["block_state"][i] = [];
 
-            let dir = blocks[i][3];
-            let len = blocks[i][2];
-            block_state[i][0] = dir; // 方向 0:横 1:竖
-            block_state[i][1] = blocks[i][1-dir]; // 不动方向的坐标 横:y 竖:x （横块y不动，竖块x不动）
-            block_state[i][2] = blocks[i][dir]; // 可动方向的坐标（范围）
-            block_state[i][3] = blocks[i][dir] + len - 1;
+            let dir = window["blocks"][i][3];
+            let len = window["blocks"][i][2];
+            window["block_state"][i][0] = dir; // 方向 0:横 1:竖
+            window["block_state"][i][1] = window["blocks"][i][1-dir]; // 不动方向的坐标 横:y 竖:x （横块y不动，竖块x不动）
+            window["block_state"][i][2] = window["blocks"][i][dir]; // 可动方向的坐标（范围）
+            window["block_state"][i][3] = window["blocks"][i][dir] + len - 1;
 
             i++;
             j += 4;
         }
         
 
-        for(i = 0; i < blocks.length; i++) {
+        for(i = 0; i < window["blocks"].length; i++) {
             let block: Node|null = null;
-            let x = blocks[i][0];
-            let y = blocks[i][1];
-            let len = blocks[i][2];
-            let dir = blocks[i][3];
+            let x = window["blocks"][i][0];
+            let y = window["blocks"][i][1];
+            let len = window["blocks"][i][2];
+            let dir = window["blocks"][i][3];
 
             let abs_x = 0;
             let abs_y = 0;
-            abs_coords[i] = [];
+            window["abs_coords"][i] = [];
 
             if(i == 0) {
                 block = instantiate(this.mainBlock);
                 this.node.addChild(block);
-                abs_x = BLOCK_SIZE * x + 500;
-                abs_y = -1 * BLOCK_SIZE * y + 800;
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER;
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER;
                 block.setPosition(abs_x, abs_y, 0);
 
-                total_state[y][x] = 2;
-                total_state[y][x + 1] = 2;
+                window["total_state"][y][x] = 2;
+                window["total_state"][y][x + 1] = 2;
 
-                abs_coords[i][0] = abs_x;
-                abs_coords[i][1] = abs_y;
+                window["abs_coords"][i][0] = abs_x;
+                window["abs_coords"][i][1] = abs_y;
             }
             else if(len == 2 && dir == 0) // 横2
             {
                 block = instantiate(this.rowBlock2);
                 this.node.addChild(block);
-                abs_x = BLOCK_SIZE * x + 500;
-                abs_y = -1 * BLOCK_SIZE * y + 800;
-                block.setPosition(BLOCK_SIZE * x + 500, -1 * BLOCK_SIZE * y + 800, 0);
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER;
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER;
+                block.setPosition(BLOCK_SIZE * x + LEFT_BORDER, -1 * BLOCK_SIZE * y + UP_BORDER, 0);
 
-                total_state[y][x] = 1;
-                total_state[y][x + 1] = 1;
+                window["total_state"][y][x] = 1;
+                window["total_state"][y][x + 1] = 1;
 
-                abs_coords[i][0] = abs_x;
-                abs_coords[i][1] = abs_y;
+                window["abs_coords"][i][0] = abs_x;
+                window["abs_coords"][i][1] = abs_y;
             }
             else if(len == 2 && dir == 1) // 竖2
             {
                 block = instantiate(this.colBlock2);
                 this.node.addChild(block);
-                abs_x = BLOCK_SIZE * x + 500 - (BLOCK_SIZE / 2);
-                abs_y = -1 * BLOCK_SIZE * y + 800 - (BLOCK_SIZE / 2);
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER - (BLOCK_SIZE / 2);
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER - (BLOCK_SIZE / 2);
                 block.setPosition(abs_x, abs_y, 0);
 
-                total_state[y][x] = 1;
-                total_state[y + 1][x] = 1;
+                window["total_state"][y][x] = 1;
+                window["total_state"][y + 1][x] = 1;
 
-                abs_coords[i][0] = abs_x;
-                abs_coords[i][1] = abs_y;
+                window["abs_coords"][i][0] = abs_x;
+                window["abs_coords"][i][1] = abs_y;
             }
             else if(len == 3 && dir == 0) // 横3
             {
                 block = instantiate(this.rowBlock3);
                 this.node.addChild(block);
-                abs_x = BLOCK_SIZE * x + 500 + (BLOCK_SIZE / 2);
-                abs_y = -1 * BLOCK_SIZE * y + 800;
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER + (BLOCK_SIZE / 2);
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER;
                 block.setPosition(abs_x, abs_y, 0);
 
-                total_state[y][x] = 1;
-                total_state[y][x + 1] = 1;
-                total_state[y][x + 2] = 1;
+                window["total_state"][y][x] = 1;
+                window["total_state"][y][x + 1] = 1;
+                window["total_state"][y][x + 2] = 1;
 
-                abs_coords[i][0] = abs_x;
-                abs_coords[i][1] = abs_y;
+                window["abs_coords"][i][0] = abs_x;
+                window["abs_coords"][i][1] = abs_y;
             }
             else if(len == 3 && dir == 1) // 竖3
             {
                 block = instantiate(this.colBlock3);
                 this.node.addChild(block);
-                abs_x = BLOCK_SIZE * x + 500 - (BLOCK_SIZE / 2);
-                abs_y = -1 * BLOCK_SIZE * y + 800 - BLOCK_SIZE;
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER - (BLOCK_SIZE / 2);
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER - BLOCK_SIZE;
                 block.setPosition(abs_x, abs_y, 0);
 
-                total_state[y][x] = 1;
-                total_state[y + 1][x] = 1;
-                total_state[y + 2][x] = 1;
+                window["total_state"][y][x] = 1;
+                window["total_state"][y + 1][x] = 1;
+                window["total_state"][y + 2][x] = 1;
 
-                abs_coords[i][0] = abs_x;
-                abs_coords[i][1] = abs_y;
+                window["abs_coords"][i][0] = abs_x;
+                window["abs_coords"][i][1] = abs_y;
             }
         }
+    }
 
-        /*for(i = 0; i < blocks.length; i++) {
-            console.log("" + i + ":" + abs_coords[i][0] + " " + abs_coords[i][1]);
-        }*/
+    onNextButtonClicked() {   
+        //window["id"] = window["id"] % 1000 + 1;
+        this.setCurState(GameState.STATE_INIT);
+    }
+
+    onRestartButtonClicked() {   
+        if(window["victory"] == 0)
+        {
+            this.setCurState(GameState.STATE_INIT);
+        }
     }
 }
 

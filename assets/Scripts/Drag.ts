@@ -1,12 +1,10 @@
-import { _decorator, Component, Node, EventTouch, Vec2, absMax } from 'cc';
+import { _decorator, Component, Node, Label, EventTouch, Vec2, absMax, sys } from 'cc';
 
 const { ccclass, property } = _decorator;
 
-const BLOCK_SIZE: number = 80;
-const LEFT_BORDER: number = 500;
-const RIGHT_BORDER: number = 980;
-const DOWN_BORDER: number = 240;
-const UP_BORDER: number = 720;
+const BLOCK_SIZE: number = 160;
+const LEFT_BORDER: number = 130;
+const UP_BORDER: number = 850;
 
 @ccclass
 export default class Drag extends Component {
@@ -21,17 +19,24 @@ export default class Drag extends Component {
     private begin_y: number = 0;
     private step: number = 0;
     private lock: number = 0;
-    
+
     onLoad() {
         // 初始化拖动
         this.getBlockType();
         this.node.on(Node.EventType.TOUCH_START, this.onTouchStart, this);
         this.node.on(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
         this.node.on(Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.node.on(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
         //console.log(window["state"]);
     }
 
     onTouchStart(event: EventTouch) {
+        if(window["victory"] == 1)
+        {
+            // 胜利后不能再操作
+            return;
+        }
+
         this.lock = 0; // 解除锁定
         // 记录开始触摸的位置
         this.startPos = event.getLocation();
@@ -51,6 +56,11 @@ export default class Drag extends Component {
     }
  
     onTouchMove(event: EventTouch) {
+        if(window["victory"] == 1)
+        {
+            // 胜利后不能再操作
+            return;
+        }
         // 计算移动的偏移量
         let delta = event.getDelta();
         // 更新节点位置
@@ -65,7 +75,7 @@ export default class Drag extends Component {
 
         if(this.lock == 1)
             return;
-        
+
         // 对块类型分类讨论
         if(this.blockType == 1 || this.blockType == 3 || this.blockType == 5)
         {
@@ -77,6 +87,9 @@ export default class Drag extends Component {
                     this.node.setPosition(cur_x, this.begin_y);
                     this.step = this.max_right;
                     //console.log(this.blockID);
+                    if(this.step != 0) 
+                       window["steps"]++;
+
                     this.updateState();
                     this.step = 0;
                     this.lock = 1;
@@ -90,16 +103,18 @@ export default class Drag extends Component {
                     this.node.setPosition(cur_x, this.begin_y);
                     this.step = -1 * this.max_left;
                     //console.log(this.blockID);
+                    if(this.step != 0) 
+                        window["steps"]++;
                     this.updateState();
                     this.step = 0;
                     this.lock = 1;
                 }
             }
-            this.node.setPosition(cur_x, last_y);
+            this.node.setPosition(cur_x, this.begin_y);
         }
     
         if(this.blockType == 2 || this.blockType == 4)
-        {
+        {   
             if(cur_y - this.begin_y > 0) // 上移
             {
                 if(cur_y - this.begin_y > this.max_up * BLOCK_SIZE)
@@ -108,6 +123,8 @@ export default class Drag extends Component {
                     this.node.setPosition(this.begin_x, cur_y);
                     this.step = -1 * this.max_up;
                     //console.log(this.blockID);
+                    if(this.step != 0) 
+                        window["steps"]++;
                     this.updateState();
                     this.step = 0;
                     this.lock = 1;
@@ -121,6 +138,8 @@ export default class Drag extends Component {
                     this.node.setPosition(this.begin_x, cur_y);
                     this.step = this.max_down;
                     //console.log(this.blockID);
+                    if(this.step != 0) 
+                        window["steps"]++;
                     this.updateState();
                     this.step = 0;
                     this.lock = 1;
@@ -132,56 +151,45 @@ export default class Drag extends Component {
     }
  
     onTouchEnd(event: EventTouch) {
+        if(window["victory"] == 1)
+        {
+            // 胜利后不能再操作
+            return;
+        }
+
         // 触摸结束
         // 确定最终位置，定在整数点
+        console.log("touch end");
         console.log("end id:" + this.blockID);
         console.log(this.node.position.x + " " + this.node.position.y);
-        let touchEnd_x = this.node.position.x;
-        let touchEnd_y = this.node.position.y; 
-        let final_move = 0;
-        if(this.blockType == 1 || this.blockType == 3 || this.blockType == 5)
-        {
-            if(touchEnd_x >= this.begin_x) // right
-            {
-                final_move = Math.floor(((touchEnd_x - this.begin_x) + BLOCK_SIZE / 2) / BLOCK_SIZE);
-                //console.log(final_move);
-                this.node.setPosition(this.begin_x + final_move * BLOCK_SIZE, touchEnd_y);
-                this.step = final_move;
-            }
-            else // left
-            {
-                final_move = Math.floor(((this.begin_x - touchEnd_x) + BLOCK_SIZE / 2) / BLOCK_SIZE);
-                this.node.setPosition(this.begin_x - final_move * BLOCK_SIZE, touchEnd_y);
-                this.step = -1 * final_move;
-            }
+        this.adjustLocation();
 
-        }
-        if(this.blockType == 2 || this.blockType == 4)
-        {
-            if(touchEnd_y >= this.begin_y) // up
-            {
-                final_move = Math.floor(((touchEnd_y - this.begin_y) + BLOCK_SIZE / 2) / BLOCK_SIZE);
-                //console.log(final_move);
-                this.node.setPosition(touchEnd_x, this.begin_y + final_move * BLOCK_SIZE);
-                this.step = -1 * final_move;
-            }
-            else // down
-            {
-                final_move = Math.floor(((this.begin_y - touchEnd_y) + BLOCK_SIZE / 2) / BLOCK_SIZE);
-                //console.log(final_move);
-                this.node.setPosition(touchEnd_x, this.begin_y - final_move * BLOCK_SIZE);
-                this.step = final_move;
-            }
-        }
         // 更新状态
         if(this.lock == 0)
         {
             this.updateState();
+            if(this.step != 0)
+            window["steps"]++;
         }
         
         this.lock = 1;
         console.log(window["total_state"]);
-        console.log("dalifujin");
+
+        if(window["total_state"][2][5] == 2)
+        {
+            window["victory"] = 1;
+            window["id"] = window["id"] % 1000 + 1;
+            //console.log(window["id"]);
+
+            if(window["id"] > window["game_process"])
+            {
+                // 文件操作
+                window["game_process"] = window["id"];
+                sys.localStorage.setItem('game_process', window["game_process"]);
+            }
+        }
+        //console.log("victory?" + window["victory"]);
+        
     }
 
     getBlockType() {
@@ -259,6 +267,45 @@ export default class Drag extends Component {
         }
     }
 
+    adjustLocation() {
+        let touchEnd_x = this.node.position.x;
+        let touchEnd_y = this.node.position.y; 
+        let final_move = 0;
+        if(this.blockType == 1 || this.blockType == 3 || this.blockType == 5)
+        {
+            if(touchEnd_x >= this.begin_x) // right
+            {
+                final_move = Math.floor(((touchEnd_x - this.begin_x) + BLOCK_SIZE / 2) / BLOCK_SIZE);
+                //console.log(final_move);
+                this.node.setPosition(this.begin_x + final_move * BLOCK_SIZE, touchEnd_y);
+                this.step = final_move;
+            }
+            else // left
+            {
+                final_move = Math.floor(((this.begin_x - touchEnd_x) + BLOCK_SIZE / 2) / BLOCK_SIZE);
+                this.node.setPosition(this.begin_x - final_move * BLOCK_SIZE, touchEnd_y);
+                this.step = -1 * final_move;
+            }
+
+        }
+        if(this.blockType == 2 || this.blockType == 4)
+        {
+            if(touchEnd_y >= this.begin_y) // up
+            {
+                final_move = Math.floor(((touchEnd_y - this.begin_y) + BLOCK_SIZE / 2) / BLOCK_SIZE);
+                //console.log(final_move);
+                this.node.setPosition(touchEnd_x, this.begin_y + final_move * BLOCK_SIZE);
+                this.step = -1 * final_move;
+            }
+            else // down
+            {
+                final_move = Math.floor(((this.begin_y - touchEnd_y) + BLOCK_SIZE / 2) / BLOCK_SIZE);
+                //console.log(final_move);
+                this.node.setPosition(touchEnd_x, this.begin_y - final_move * BLOCK_SIZE);
+                this.step = final_move;
+            }
+        }
+    }
     updateState() {
         let id = this.blockID;
         if(id == -1)
@@ -301,8 +348,8 @@ export default class Drag extends Component {
             let abs_y = 0;
 
             if(i == 0) {
-                abs_x = BLOCK_SIZE * x + 500;
-                abs_y = -1 * BLOCK_SIZE * y + 800;
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER;
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER;
 
                 window["total_state"][y][x] = 2;
                 window["total_state"][y][x + 1] = 2;
@@ -312,8 +359,8 @@ export default class Drag extends Component {
             }
             else if(len == 2 && dir == 0) // 横2
             {
-                abs_x = BLOCK_SIZE * x + 500;
-                abs_y = -1 * BLOCK_SIZE * y + 800;
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER;
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER;
 
                 window["total_state"][y][x] = 1;
                 window["total_state"][y][x + 1] = 1;
@@ -323,8 +370,8 @@ export default class Drag extends Component {
             }
             else if(len == 2 && dir == 1) // 竖2
             {
-                abs_x = BLOCK_SIZE * x + 500 - (BLOCK_SIZE / 2);
-                abs_y = -1 * BLOCK_SIZE * y + 800 - (BLOCK_SIZE / 2);
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER - (BLOCK_SIZE / 2);
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER - (BLOCK_SIZE / 2);
 
                 window["total_state"][y][x] = 1;
                 window["total_state"][y + 1][x] = 1;
@@ -334,8 +381,8 @@ export default class Drag extends Component {
             }
             else if(len == 3 && dir == 0) // 横3
             {
-                abs_x = BLOCK_SIZE * x + 500 + (BLOCK_SIZE / 2);
-                abs_y = -1 * BLOCK_SIZE * y + 800;
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER + (BLOCK_SIZE / 2);
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER;
 
                 window["total_state"][y][x] = 1;
                 window["total_state"][y][x + 1] = 1;
@@ -346,8 +393,8 @@ export default class Drag extends Component {
             }
             else if(len == 3 && dir == 1) // 竖3
             {
-                abs_x = BLOCK_SIZE * x + 500 - (BLOCK_SIZE / 2);
-                abs_y = -1 * BLOCK_SIZE * y + 800 - BLOCK_SIZE;
+                abs_x = BLOCK_SIZE * x + LEFT_BORDER - (BLOCK_SIZE / 2);
+                abs_y = -1 * BLOCK_SIZE * y + UP_BORDER - BLOCK_SIZE;
 
                 window["total_state"][y][x] = 1;
                 window["total_state"][y + 1][x] = 1;
