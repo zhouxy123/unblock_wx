@@ -1,9 +1,9 @@
 import { _decorator, Component, Node, ScrollView, EventHandler, Prefab, instantiate, Label, Button, math  } from 'cc';
 const { ccclass, property } = _decorator;
 
-const X_BEGIN: number = -380;
+const X_BEGIN: number = -440;
 const Y_BEGIN: number = -100;
-const GAP: number = 190;
+const GAP: number = 220;
 const TOTAL_LEVEL: number = 100;
 let page = 1;
 
@@ -64,10 +64,13 @@ export class ChooseLevel extends Component {
     }
 
     onChooseButtonClicked() {
-        if(this.chooseLevel) {
-            this.chooseLevel.active = true;
+        if(window["victory"] == 0)
+        {
+            if(this.chooseLevel) {
+                this.chooseLevel.active = true;
+            }
+            this.generatePage(page);
         }
-        this.generatePage(page);
     }
 
     onChooseCloseButtonClicked() {

@@ -2,9 +2,9 @@ import { _decorator, Component, Node, Label, EventTouch, Vec2, absMax, sys } fro
 
 const { ccclass, property } = _decorator;
 
-const BLOCK_SIZE: number = 160;
-const LEFT_BORDER: number = 130;
-const UP_BORDER: number = 850;
+const BLOCK_SIZE: number = 180;
+const LEFT_BORDER: number = 90;
+const UP_BORDER: number = 890;
 
 @ccclass
 export default class Drag extends Component {

@@ -1,4 +1,5 @@
 import { _decorator, Component, instantiate, Label, Node, Prefab, TextAsset, Scene, sys } from 'cc';
+import "miniprogram-api-typings";
 
 const { ccclass, property } = _decorator;
 
@@ -24,9 +25,9 @@ let steps : number = 0;
 let if_first: number = 1; // 是否刚进入游戏？是：加载进度
 
 // const LEVEL_ID: number = 3; 
-const BLOCK_SIZE: number = 160;
-const LEFT_BORDER: number = 130;
-const UP_BORDER: number = 850;
+const BLOCK_SIZE: number = 180;
+const LEFT_BORDER: number = 90;
+const UP_BORDER: number = 890;
 
 window["blocks"] = blocks; // 目的：把blocks弄成全局变量
 window["total_state"] = total_state;
@@ -39,8 +40,10 @@ window["game_process"] = 1;
 
 @ccclass('GameManager')
 export class GameManager extends Component {
+
+    @property({ type: Node })
+    public mainMenu : Node | null = null;
     
-    // 实例化多种prefab
     @property({type: Prefab})
     public mainBlock: Prefab|null = null;
 
@@ -57,6 +60,9 @@ export class GameManager extends Component {
     public colBlock3: Prefab|null = null;
 
     @property({ type: Node })
+    public helpMenu: Node | null = null;
+
+    @property({ type: Node })
     public victoryMenu: Node | null = null;
 
     @property({ type: Label })
@@ -68,6 +74,13 @@ export class GameManager extends Component {
     @property({ type: Node })
     public chooseLevel: Node | null = null;
 
+    @property({ type: Node })
+    public controlTable: Node | null = null;
+
+    @property({ type: Node })
+    public LevelTable: Node | null = null;
+
+
     // 声明属性 ‘itemGiftText‘ 的类型为 TextAsset
     @property(TextAsset)
     itemGiftText: TextAsset = null!;
@@ -76,7 +89,12 @@ export class GameManager extends Component {
     processText: TextAsset = null!;
 
     start() {
-        this.setCurState(GameState.STATE_INIT);
+        this.displayMainMenu();
+        // 授权显示菜单
+        wx.showShareMenu({
+        menus: ['shareAppMessage', 'shareTimeline']
+      })
+        //this.setCurState(GameState.STATE_INIT);
     }
 
     init() {
@@ -89,12 +107,24 @@ export class GameManager extends Component {
             this.victoryMenu.active = false;
         } // 初始化不显示胜利界面
 
+        if(this.helpMenu) {
+            this.helpMenu.active = false; 
+        }
+
         if(this.levelLabel) {
-            this.levelLabel.string = "Level " + window["id"];
+            this.levelLabel.string = "关卡：" + window["id"];
         }
 
         if(this.stepLabel) {
-            this.stepLabel.string = "Steps: 0";
+            this.stepLabel.string = "步数：0";
+        }
+
+        if(this.controlTable) {
+            this.controlTable.active = true;
+        }
+
+        if(this.LevelTable) {
+            this.LevelTable.active = true;
         }
 
         victory = 0;
@@ -116,7 +146,7 @@ export class GameManager extends Component {
         }
 
         if(this.stepLabel) {
-            this.stepLabel.string = "Steps: " + window["steps"];
+            this.stepLabel.string = "步数：" + window["steps"];
         }
 
         if(window["new_level"] != 0)
@@ -279,15 +309,59 @@ export class GameManager extends Component {
         }
     }
 
+    displayMainMenu() {
+        if(this.mainMenu) {
+            this.mainMenu.active = true;
+        }
+        if(this.helpMenu) {
+            this.helpMenu.active = false; 
+        }
+        if(this.victoryMenu) {
+            this.victoryMenu.active = false;
+        }
+        if(this.controlTable) {
+            this.controlTable.active = false;
+        }
+        if(this.LevelTable) {
+            this.LevelTable.active = false;
+        }
+    }
+
+    onStartButtonClicked() {   
+        if(this.mainMenu) {
+            this.mainMenu.active = false;
+        }
+        this.setCurState(GameState.STATE_INIT);
+    }
+
     onNextButtonClicked() {   
         //window["id"] = window["id"] % 1000 + 1;
         this.setCurState(GameState.STATE_INIT);
+    }
+
+    onHomeButtonClicked() {
+        this.displayMainMenu();
     }
 
     onRestartButtonClicked() {   
         if(window["victory"] == 0)
         {
             this.setCurState(GameState.STATE_INIT);
+        }
+    }
+
+    onHelpButtonClicked() { 
+        if(window["victory"] == 0)  
+        {
+            if(this.helpMenu) {
+                this.helpMenu.active = true;
+            }
+        }
+    }
+
+    onCloseHelpButtonClicked() {
+        if(this.helpMenu) {
+            this.helpMenu.active = false;
         }
     }
 }
