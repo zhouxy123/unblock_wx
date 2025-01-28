@@ -23,6 +23,7 @@ let victory: number = 0;
 let level_id = 1;
 let steps : number = 0;
 let if_first: number = 1; // 是否刚进入游戏？是：加载进度
+let new_level : number = 0;
 
 // const LEVEL_ID: number = 3; 
 const BLOCK_SIZE: number = 180;
@@ -37,6 +38,8 @@ window["victory"] = victory;
 window["steps"] = steps;
 window["id"] = level_id;
 window["game_process"] = 1;
+window["new_level"] = new_level;
+window["if_first"] = if_first;
 
 @ccclass('GameManager')
 export class GameManager extends Component {
@@ -60,6 +63,9 @@ export class GameManager extends Component {
     public colBlock3: Prefab|null = null;
 
     @property({ type: Node })
+    public choosePackMenu: Node | null = null;
+
+    @property({ type: Node })
     public helpMenu: Node | null = null;
 
     @property({ type: Node })
@@ -80,6 +86,9 @@ export class GameManager extends Component {
     @property({ type: Node })
     public LevelTable: Node | null = null;
 
+    @property({ type: Label })
+    public levelIdLabel: Label | null = null;
+
 
     // 声明属性 ‘itemGiftText‘ 的类型为 TextAsset
     @property(TextAsset)
@@ -98,9 +107,9 @@ export class GameManager extends Component {
     }
 
     init() {
-        if(if_first == 1) {
+        if(window["if_first"] == 1) {
             this.getProcess();
-            if_first = 0;
+            window["if_first"] = 0;
         }
 
         if(this.victoryMenu) {
@@ -155,6 +164,9 @@ export class GameManager extends Component {
             this.setCurState(GameState.STATE_INIT);
             if(this.chooseLevel) {
                 this.chooseLevel.active = false;
+            }
+            if(this.choosePackMenu) {
+                this.choosePackMenu.active = false; 
             }
             window["new_level"] = 0;
 
@@ -313,6 +325,30 @@ export class GameManager extends Component {
         if(this.mainMenu) {
             this.mainMenu.active = true;
         }
+        if(this.choosePackMenu) {
+            this.choosePackMenu.active = false; 
+        }
+        if(this.helpMenu) {
+            this.helpMenu.active = false; 
+        }
+        if(this.victoryMenu) {
+            this.victoryMenu.active = false;
+        }
+        if(this.controlTable) {
+            this.controlTable.active = false;
+        }
+        if(this.LevelTable) {
+            this.LevelTable.active = false;
+        }
+    }
+
+    displayChoosePackMenu() {
+        if(this.mainMenu) {
+            this.mainMenu.active = false;
+        }
+        if(this.choosePackMenu) {
+            this.choosePackMenu.active = true; 
+        }
         if(this.helpMenu) {
             this.helpMenu.active = false; 
         }
@@ -332,6 +368,10 @@ export class GameManager extends Component {
             this.mainMenu.active = false;
         }
         this.setCurState(GameState.STATE_INIT);
+    }
+
+    onChoosePackButtonClicked() {   
+        this.displayChoosePackMenu();
     }
 
     onNextButtonClicked() {   
@@ -364,5 +404,21 @@ export class GameManager extends Component {
             this.helpMenu.active = false;
         }
     }
+
+    /*
+    onChooseLevelButtonClicked() {
+        if_first = 0;
+        window["new_level"] = parseInt(this.levelIdLabel.string);
+        window["id"] = window["new_level"];
+        console.log("choosed level:" + window["new_level"]);
+        if(this.mainMenu) {
+            this.mainMenu.active = false;
+        }
+        if(this.choosePackMenu) {
+            this.choosePackMenu.active = false; 
+        }
+        //window["id"] = window["new_level"];
+        this.setCurState(GameState.STATE_INIT);
+    }*/
 }
 

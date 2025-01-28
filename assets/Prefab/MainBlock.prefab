@@ -28,15 +28,18 @@
       },
       {
         "__id__": 6
+      },
+      {
+        "__id__": 8
       }
     ],
     "_prefab": {
-      "__id__": 8
+      "__id__": 10
     },
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 0,
-      "y": 0,
+      "x": 450,
+      "y": 360.00000000000006,
       "z": 0
     },
     "_lrot": {
@@ -147,11 +150,43 @@
     "__prefab": {
       "__id__": 7
     },
+    "VictoryAnim": {
+      "__id__": 8
+    },
     "_id": ""
   },
   {
     "__type__": "cc.CompPrefabInfo",
     "fileId": "a6+QXUa9pDUa+HYDY2jim3"
+  },
+  {
+    "__type__": "cc.Animation",
+    "_name": "",
+    "_objFlags": 0,
+    "__editorExtras__": {},
+    "node": {
+      "__id__": 1
+    },
+    "_enabled": true,
+    "__prefab": {
+      "__id__": 9
+    },
+    "playOnLoad": false,
+    "_clips": [
+      {
+        "__uuid__": "1e937239-7255-4afa-8382-553887487ba5",
+        "__expectedType__": "cc.AnimationClip"
+      }
+    ],
+    "_defaultClip": {
+      "__uuid__": "1e937239-7255-4afa-8382-553887487ba5",
+      "__expectedType__": "cc.AnimationClip"
+    },
+    "_id": ""
+  },
+  {
+    "__type__": "cc.CompPrefabInfo",
+    "fileId": "cbJsLiL8VFFab5f8LGo/qQ"
   },
   {
     "__type__": "cc.PrefabInfo",

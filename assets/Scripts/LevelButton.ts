@@ -12,6 +12,14 @@ export class LevelButton extends Component {
     @property({ type: Node })
     public chooseLevel: Node | null = null;
 
+    /*
+    @property({ type: Node })
+    public mainMenu : Node | null = null;
+
+    @property({ type: Node })
+    public choosePackMenu: Node | null = null;
+    */
+
     start() {
 
     }
@@ -21,7 +29,19 @@ export class LevelButton extends Component {
     }
 
     onChooseLevelButtonClicked() {
+        window["if_first"] = 0;
         window["new_level"] = parseInt(this.levelIdLabel.string);
+        window["id"] = window["new_level"];
+        console.log("choosed level:" + window["new_level"]);
+        /*
+        if(this.mainMenu) {
+            this.mainMenu.active = false;
+        }
+        if(this.choosePackMenu) {
+            this.choosePackMenu.active = false; 
+        }*/
+        //window["id"] = window["new_level"];
+        // this.setCurState(GameState.STATE_INIT);
     }
 
 }

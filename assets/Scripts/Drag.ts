@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Label, EventTouch, Vec2, absMax, sys } from 'cc';
+import { _decorator, Component, Node, Label, EventTouch, Vec2, absMax, sys, Animation, AnimationState } from 'cc';
 
 const { ccclass, property } = _decorator;
 
@@ -19,6 +19,9 @@ export default class Drag extends Component {
     private begin_y: number = 0;
     private step: number = 0;
     private lock: number = 0;
+
+    @property(Animation)
+    VictoryAnim: Animation = null;
 
     onLoad() {
         // 初始化拖动
@@ -177,10 +180,25 @@ export default class Drag extends Component {
 
         if(window["total_state"][2][5] == 2)
         {
-            window["victory"] = 1;
+            
             window["id"] = window["id"] % 1000 + 1;
-            //console.log(window["id"]);
 
+            if (this.VictoryAnim) {
+                this.VictoryAnim.play('victory_slide_out');
+
+                const onAnimationFinished = (type: string, state: AnimationState) => {
+                    if (state.name === 'victory_slide_out') {
+                        //console.log(`动画 "${animName}" 播放完成`);
+                        this.VictoryAnim.off(Animation.EventType.FINISHED, onAnimationFinished); // 移除监听
+                        //this.nextStep(); // 执行下一步操作
+                        window["victory"] = 1;
+                    }
+                };
+        
+                this.VictoryAnim.on(Animation.EventType.FINISHED, onAnimationFinished);
+            }
+            
+            //window["victory"] = 1;
             if(window["id"] > window["game_process"])
             {
                 // 文件操作
