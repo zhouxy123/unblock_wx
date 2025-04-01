@@ -30,9 +30,9 @@ export class LevelButton extends Component {
 
     onChooseLevelButtonClicked() {
         window["if_first"] = 0;
-        window["new_level"] = parseInt(this.levelIdLabel.string);
+        window["new_level"] = parseInt(this.levelIdLabel.string) + 1000 * window["pack_id"];
         window["id"] = window["new_level"];
-        console.log("choosed level:" + window["new_level"]);
+        console.log("choosed level:" + window["id"]);
         /*
         if(this.mainMenu) {
             this.mainMenu.active = false;

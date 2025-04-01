@@ -1,4 +1,5 @@
 import { _decorator, Component, instantiate, Label, Node, Prefab, TextAsset, Scene, sys } from 'cc';
+import { ConfettiController } from './ConfettiController';
 import "miniprogram-api-typings";
 
 const { ccclass, property } = _decorator;
@@ -24,6 +25,11 @@ let level_id = 1;
 let steps : number = 0;
 let if_first: number = 1; // 是否刚进入游戏？是：加载进度
 let new_level : number = 0;
+let pack_id: number = 0; // 难度等级
+let game_process: number[] = [1, 1, 1, 1, 1]; // 对应入门、简单、中等、困难、专家五种难度
+let help_open: number = 0;
+let confetti: number = 0;
+
 
 // const LEVEL_ID: number = 3; 
 const BLOCK_SIZE: number = 180;
@@ -37,9 +43,11 @@ window["abs_coords"] = abs_coords;
 window["victory"] = victory;
 window["steps"] = steps;
 window["id"] = level_id;
-window["game_process"] = 1;
+window["game_process"] = game_process;
 window["new_level"] = new_level;
 window["if_first"] = if_first;
+window["pack_id"] = pack_id;
+window["confetti"] = confetti;
 
 @ccclass('GameManager')
 export class GameManager extends Component {
@@ -89,6 +97,12 @@ export class GameManager extends Component {
     @property({ type: Label })
     public levelIdLabel: Label | null = null;
 
+    @property({type: Prefab})
+    public confettiPrefab: Prefab|null = null;
+
+    @property({ type: Node })
+    public upperNode: Node | null = null;
+
 
     // 声明属性 ‘itemGiftText‘ 的类型为 TextAsset
     @property(TextAsset)
@@ -107,10 +121,12 @@ export class GameManager extends Component {
     }
 
     init() {
+        
         if(window["if_first"] == 1) {
             this.getProcess();
             window["if_first"] = 0;
         }
+        //window["id"] = 4800;
 
         if(this.victoryMenu) {
             this.victoryMenu.active = false;
@@ -118,10 +134,26 @@ export class GameManager extends Component {
 
         if(this.helpMenu) {
             this.helpMenu.active = false; 
+            help_open = 0;
         }
 
         if(this.levelLabel) {
-            this.levelLabel.string = "关卡：" + window["id"];
+            if(window["id"] <= 1000) {
+                this.levelLabel.string = "关卡：1-" + window["id"];
+            }
+            else if(window["id"] <= 2000) {
+                this.levelLabel.string = "关卡：2-" + (window["id"] - 1000);
+            }
+            else if(window["id"] <= 3000) {
+                this.levelLabel.string = "关卡：3-" + (window["id"] - 2000);
+            }
+            else if(window["id"] <= 4000) {
+                this.levelLabel.string = "关卡：4-" + (window["id"] - 3000);
+            }
+            else {
+                this.levelLabel.string = "关卡：5-" + (window["id"] - 4000);
+            }
+            
         }
 
         if(this.stepLabel) {
@@ -146,6 +178,14 @@ export class GameManager extends Component {
     }
 
     update(deltaTime: number) {
+        if(window["confetti"] == 1) {
+            this.schedule(this.spawnConfetti, 0.1); // 每隔0.1s生成一个彩纸屑动画
+            this.scheduleOnce(() => {
+                this.unschedule(this.spawnConfetti);
+            }, 3); // 3s后停止生成
+            window["confetti"] = 0;
+        }
+
         if(window["victory"] == 1)
         {
             this.setCurState(GameState.STATE_END);
@@ -188,12 +228,35 @@ export class GameManager extends Component {
     }
 
     getProcess() {
-        if(sys.localStorage.getItem('game_process') >= 1)
+        // 分别处理五种难度
+        if(sys.localStorage.getItem('starter_process') >= 1)
         {
-            window["game_process"] = sys.localStorage.getItem('game_process');
+            window["game_process"][0] = parseInt(sys.localStorage.getItem('starter_process'));
         }
-        window["id"] = window["game_process"];
+
+        if(sys.localStorage.getItem('beginner_process') >= 1)
+        {
+            window["game_process"][1] = parseInt(sys.localStorage.getItem('beginner_process'));
+        }
+        
+        if(sys.localStorage.getItem('intermediate_process') >= 1)
+        {
+            window["game_process"][2] = parseInt(sys.localStorage.getItem('intermediate_process'));
+        }
+    
+        if(sys.localStorage.getItem('advanced_process') >= 1)
+        {
+            window["game_process"][3] = parseInt(sys.localStorage.getItem('advanced_process'));
+        }
+        
+        if(sys.localStorage.getItem('expert_process') >= 1)
+        {
+            window["game_process"][4] = parseInt(sys.localStorage.getItem('expert_process'));
+        }
+
+        window["id"] = window["game_process"][0];
         console.log("level id = " + window["id"]);
+        console.log("Process:" + window["game_process"])
     }
 
     generate(level: number) {
@@ -364,27 +427,43 @@ export class GameManager extends Component {
     }
 
     onStartButtonClicked() {   
-        if(this.mainMenu) {
-            this.mainMenu.active = false;
+        if(help_open == 0) {
+            if(this.mainMenu) {
+                this.mainMenu.active = false;
+            }
+            this.setCurState(GameState.STATE_INIT);
         }
-        this.setCurState(GameState.STATE_INIT);
     }
 
-    onChoosePackButtonClicked() {   
-        this.displayChoosePackMenu();
+    onChoosePackButtonClicked() {  
+        window["victory"] = 0;
+        if(this.victoryMenu) {
+            this.victoryMenu.active = false;
+        }
+        if(help_open == 0) { 
+            this.displayChoosePackMenu();
+        }
     }
 
     onNextButtonClicked() {   
         //window["id"] = window["id"] % 1000 + 1;
         this.setCurState(GameState.STATE_INIT);
+        this.unschedule(this.spawnConfetti);
+        window["confetti"] = 0;
     }
 
     onHomeButtonClicked() {
-        this.displayMainMenu();
+        window["victory"] = 0;
+        if(this.victoryMenu) {
+            this.victoryMenu.active = false;
+        }
+        if(help_open == 0) {
+            this.displayMainMenu();
+        }
     }
 
     onRestartButtonClicked() {   
-        if(window["victory"] == 0)
+        if(window["victory"] == 0 && help_open == 0)
         {
             this.setCurState(GameState.STATE_INIT);
         }
@@ -396,29 +475,26 @@ export class GameManager extends Component {
             if(this.helpMenu) {
                 this.helpMenu.active = true;
             }
+            help_open = 1;
         }
     }
 
     onCloseHelpButtonClicked() {
         if(this.helpMenu) {
             this.helpMenu.active = false;
+            help_open = 0;
         }
     }
 
-    /*
-    onChooseLevelButtonClicked() {
-        if_first = 0;
-        window["new_level"] = parseInt(this.levelIdLabel.string);
-        window["id"] = window["new_level"];
-        console.log("choosed level:" + window["new_level"]);
-        if(this.mainMenu) {
-            this.mainMenu.active = false;
-        }
-        if(this.choosePackMenu) {
-            this.choosePackMenu.active = false; 
-        }
-        //window["id"] = window["new_level"];
-        this.setCurState(GameState.STATE_INIT);
-    }*/
+    spawnConfetti() {
+        const confettiRoot = instantiate(this.confettiPrefab); // 预制体
+        this.upperNode.addChild(confettiRoot); // 挂载到当前 UI/游戏场景
+        confettiRoot.setSiblingIndex(this.node.children.length - 1);// 将 confettiRoot 移动到父节点的最高层，保证显示在最上方
+        confettiRoot.getComponent(ConfettiController).startConfettiAnimation(); // 开始彩纸屑动画
+
+        setTimeout(() => {
+            confettiRoot.destroy();
+        }, 2000); // 2秒后销毁
+    }
 }
 

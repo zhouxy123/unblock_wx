@@ -180,9 +180,15 @@ export default class Drag extends Component {
 
         if(window["total_state"][2][5] == 2)
         {
-            
-            window["id"] = window["id"] % 1000 + 1;
+            window["confetti"] = 1; // 控制播放彩纸屑动画
 
+            // 步数
+            console.log("steps:" + window["steps"]);
+            // 从文件中读取最佳步数，评价星级
+
+            window["id"] = (window["id"] + 1) % 4800;
+
+            // 播放主滑块移出动画
             if (this.VictoryAnim) {
                 this.VictoryAnim.play('victory_slide_out');
 
@@ -194,20 +200,45 @@ export default class Drag extends Component {
                         window["victory"] = 1;
                     }
                 };
-        
                 this.VictoryAnim.on(Animation.EventType.FINISHED, onAnimationFinished);
             }
             
-            //window["victory"] = 1;
-            if(window["id"] > window["game_process"])
+            // 分别管理各关卡包进度
+            if(window["id"] > window["game_process"][0] && window["id"] <= 1000)
             {
-                // 文件操作
-                window["game_process"] = window["id"];
-                sys.localStorage.setItem('game_process', window["game_process"]);
+                // starter
+                window["game_process"][0] = window["id"];
+                sys.localStorage.setItem('starter_process', window["game_process"][0]);
+            }
+
+            else if(window["id"] > window["game_process"][1] + 1000 && window["id"] <= 2000)
+            {
+                // beginner
+                window["game_process"][1] = window["id"] - 1000;
+                sys.localStorage.setItem('beginner_process', window["game_process"][1]);
+            }
+
+            else if(window["id"] > window["game_process"][2] + 2000 && window["id"] <= 3000)
+            {
+                // intermediate
+                window["game_process"][2] = window["id"] - 2000;
+                sys.localStorage.setItem('intermediate_process', window["game_process"][2]);
+            }
+
+            else if(window["id"] > window["game_process"][3] + 3000 && window["id"] <= 4000)
+            {
+                // advanced
+                window["game_process"][3] = window["id"] - 3000;
+                sys.localStorage.setItem('advanced_process', window["game_process"][3]);
+            }
+
+            else if(window["id"] > window["game_process"][4] + 4000 && window["id"] <= 4800)
+            {
+                // expert
+                window["game_process"][4] = window["id"] - 4000;
+                sys.localStorage.setItem('expert_process', window["game_process"][4]);
             }
         }
-        //console.log("victory?" + window["victory"]);
-        
     }
 
     getBlockType() {
