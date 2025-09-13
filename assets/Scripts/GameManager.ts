@@ -2,12 +2,17 @@ import { _decorator, Component, instantiate, Label, Node, Prefab, TextAsset, Sce
 import { ConfettiController } from './ConfettiController';
 import "miniprogram-api-typings";
 
+// initWasm: 从../resources/wasm/solver.js中默认导出，对应export default function  
+// {solve}: 必须与solver.js中对应函数名一致
+import initWasm, {solve} from "../resources/wasm/solver.js";
+
 const { ccclass, property } = _decorator;
 
 enum GameState {
     STATE_INIT,
     STATE_PLAYING,
     STATE_END,
+    STATE_GUIDE,
 };
 
 let blocks: number[][] = [];
@@ -111,13 +116,23 @@ export class GameManager extends Component {
     @property(TextAsset)
     processText: TextAsset = null!;
 
-    start() {
+    //private wasmExports: any = null;  // 保存 wasm 导出的对象
+
+    async start() {
         this.displayMainMenu();
         // 授权显示菜单
+        
         wx.showShareMenu({
         menus: ['shareAppMessage', 'shareTimeline']
-      })
-        //this.setCurState(GameState.STATE_INIT);
+      });
+
+        // 初始化wasm
+        try {
+            await initWasm();
+            console.log("[OK] wasm init successful");
+        } catch (e) {
+            console.error("[ERR] wasm init failed:", e);
+        }
     }
 
     init() {
@@ -224,6 +239,10 @@ export class GameManager extends Component {
             case GameState.STATE_END:
                 // 待添加：点击next level按钮，进入init状态
                 break;
+            case GameState.STATE_GUIDE:
+                // 进入引导模式
+                console.log("guide mode");
+                break;
         }
     }
 
@@ -278,7 +297,7 @@ export class GameManager extends Component {
             [0,0,0,0,0,0]];
         window["victory"] = 0;
 
-        while(data[j] != '*') {
+        while(data[j] != '*' && i < 16) {
             window["blocks"][i] = [];
             window["blocks"][i][0] = parseInt(data[j]);   // x
             window["blocks"][i][1] = parseInt(data[j + 1]);   // y
@@ -435,13 +454,14 @@ export class GameManager extends Component {
         }
     }
 
-    onChoosePackButtonClicked() {  
-        window["victory"] = 0;
-        if(this.victoryMenu) {
-            this.victoryMenu.active = false;
-        }
-        if(help_open == 0) { 
-            this.displayChoosePackMenu();
+    onChoosePackButtonClicked() {
+        if (window["victory"] == 0) {
+            if(this.victoryMenu) {
+                this.victoryMenu.active = false;
+            }
+            if(help_open == 0) { 
+                this.displayChoosePackMenu();
+            }
         }
     }
 
@@ -453,12 +473,13 @@ export class GameManager extends Component {
     }
 
     onHomeButtonClicked() {
-        window["victory"] = 0;
-        if(this.victoryMenu) {
-            this.victoryMenu.active = false;
-        }
-        if(help_open == 0) {
-            this.displayMainMenu();
+        if(window["victory"] == 0) {
+            if(this.victoryMenu) {
+                this.victoryMenu.active = false;
+            }
+            if(help_open == 0) {
+                this.displayMainMenu();
+            }
         }
     }
 
@@ -486,9 +507,37 @@ export class GameManager extends Component {
         }
     }
 
+    
+    async solve(blockStr: string): Promise<void> {
+        //const result: string = solve("022022214121102104213430");
+        const result: string = solve(blockStr);
+        console.log('结果:', result);
+    }
+
+    /*async runSolver() {
+        
+        console.log("Result:", result);
+    }*/
+    blocksToStr(arr: number[][]) {
+        const blockStr = arr.map(row => row.join("")).join("");
+        return blockStr;
+    }
+
+    // 结合wasm，生成当前布局解法
+    onSolveButtonClicked() {
+        // 获取当前布局并适配rust求解器要求的输入格式
+        console.log("solving...");
+        console.log(window["blocks"]);
+        let blockStr = this.blocksToStr(window["blocks"]);
+        console.log(blockStr);
+        this.solve(blockStr);
+        // 进入引导模式
+        this.setCurState(GameState.STATE_GUIDE);
+    }
+
     spawnConfetti() {
         const confettiRoot = instantiate(this.confettiPrefab); // 预制体
-        this.upperNode.addChild(confettiRoot); // 挂载到当前 UI/游戏场景
+        this.victoryMenu.addChild(confettiRoot); // 挂载到当前 UI/游戏场景
         confettiRoot.setSiblingIndex(this.node.children.length - 1);// 将 confettiRoot 移动到父节点的最高层，保证显示在最上方
         confettiRoot.getComponent(ConfettiController).startConfettiAnimation(); // 开始彩纸屑动画
 
