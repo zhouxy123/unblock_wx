@@ -22,13 +22,13 @@ export class ConfettiController extends Component {
     animateConfetti(confetti: Node, parentHeight: number) {
         // 随机初始位置
         const startX = randomRange(-800, 800);
-        const startY = randomRange(parentHeight / 2 - 800, parentHeight / 2 - 600);
+        const startY = randomRange(parentHeight, parentHeight - 200);
         //console.log('startY:', startY);
         confetti.setPosition(startX, startY, 0);
 
         // 目标位置
         const endX = startX + randomRange(-500, 500);
-        const endY = -800; // 落到屏幕中间
+        const endY = 0; // 落到屏幕中间
 
         // 随机旋转速度
         const rotateSpeed = randomRange(30, 100);
