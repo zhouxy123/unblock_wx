@@ -1,3 +1,5 @@
+# Mac system file
+.DS_Store
 
 #///////////////////////////
 # Cocos Creator 3D Project
@@ -7,7 +9,15 @@ temp/
 local/
 build/
 profiles/
+log/
 native
+
+# wx developer tool
+unpack/
+miniprogram_npm/
+wechat_devtools_cache/
+wechat-devtools-log/
+
 #//////////////////////////
 # NPM
 #//////////////////////////
@@ -22,3 +32,11 @@ node_modules/
 # WebStorm
 #//////////////////////////
 .idea/
+
+# TypeScript compile cache
+*.tsbuildinfo
+
+# temp files
+*.log
+*.tmp
+*.bak
