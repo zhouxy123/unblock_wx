@@ -54,6 +54,7 @@ export default class Drag extends Component {
 
         this.begin_x = this.node.position.x;
         this.begin_y = this.node.position.y;
+        console.log(window["block_state"]);
         console.log(window["total_state"]);
         console.log("start id:" + id);
     }
