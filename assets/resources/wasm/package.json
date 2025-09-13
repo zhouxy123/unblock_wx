@@ -1,0 +1,18 @@
+{
+  "name": "solver",
+  "type": "module",
+  "collaborators": [
+    "zhouxy <1438509181@qq.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "solver_bg.wasm",
+    "solver.js",
+    "solver.d.ts"
+  ],
+  "main": "solver.js",
+  "types": "solver.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
