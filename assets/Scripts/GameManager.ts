@@ -64,6 +64,10 @@ export class GameManager extends Component {
     [{"block_id":8,"delta":1},{"block_id":3,"delta":-1},{"block_id":1,"delta":-1},{"block_id":11,"delta":-1},{"block_id":0,"delta":2}];
     private guideIndex: number = 0;
     private inGuide: boolean = false;
+    private targetGridX: number | null = null;
+    private targetGridY: number | null = null;
+    private targetPos1: Vec3 | null = null;
+    private targetPos2: Vec3 | null = null;
     private guideCurrentMarker: Node | null = null;
     private guideTargetMarker1: Node | null = null; // 较近端点
     private guideTargetMarker2: Node | null = null; // 较远端点
@@ -253,6 +257,7 @@ export class GameManager extends Component {
     setCurState(value: GameState) {
         switch(value) {
             case GameState.STATE_INIT:
+                this.inGuide = false;
                 this.init();
                 break;
             case GameState.STATE_PLAYING:  
@@ -356,23 +361,26 @@ export class GameManager extends Component {
         if (!this.inGuide || !this.guideSteps || this.guideSteps.length === 0) return;
         const cur = this.guideSteps[this.guideIndex];
         if (!cur) return;
-        // 要求与当前步骤完全匹配（块 id 与步长）
-        //console.log("onGuideMove: " + payload.blockId + " " + payload.delta);
-        console.log("cur: " + cur.block_id + " " + cur.delta);
-        if (payload.blockId === cur.block_id && payload.delta === cur.delta) {
-            // 进入下一步
-            this.guideIndex++;
-            if (this.guideIndex >= this.guideSteps.length) {
-                // 完成引导
-                this.finishGuide();
-                return;
-            }
-            const next = this.guideSteps[this.guideIndex];
-            this.lockAllExcept(next.block_id);
-            this.updateGuideMarkersForCurrentStep();
-        } else {
-            // 不符合预期：保持当前锁定，不前进
+        if (payload.blockId !== cur.block_id) return;
+
+        // 基于网格坐标判断是否到达目标
+        const id = cur.block_id;
+        const gridX = window["blocks"][id][0];
+        const gridY = window["blocks"][id][1];
+        const reachedX = this.targetGridX != null && gridX === this.targetGridX;
+        const reachedY = this.targetGridY != null && gridY === this.targetGridY;
+        const reached = reachedX || reachedY; // 横向只看 X，纵向只看 Y
+        if (!reached) return;
+
+        // 命中目标，进入下一步
+        this.guideIndex++;
+        if (this.guideIndex >= this.guideSteps.length) {
+            this.finishGuide();
+            return;
         }
+        const next = this.guideSteps[this.guideIndex];
+        this.lockAllExcept(next.block_id);
+        this.updateGuideMarkersForCurrentStep();
     }
 
     private finishGuide() {
@@ -503,6 +511,22 @@ export class GameManager extends Component {
         }
         this.guideTargetMarker1.setPosition(tgtPos1);
         this.guideTargetMarker2.setPosition(tgtPos2);
+        this.targetPos1 = tgtPos1;
+        this.targetPos2 = tgtPos2;
+
+        // 记录目标网格坐标（基于 blocks 的网格系）
+        // 水平移动影响 x，垂直移动影响 y。
+        this.targetGridX = null;
+        this.targetGridY = null;
+        if (dir === 0) {
+            // 横向块：目标 x = 当前 x + delta
+            const curGridX = window["blocks"][id][0];
+            this.targetGridX = curGridX + delta;
+        } else {
+            // 纵向块：目标 y = 当前 y + (-delta)
+            const curGridY = window["blocks"][id][1];
+            this.targetGridY = curGridY + delta;
+        }
     }
 
     getProcess() {
@@ -785,7 +809,7 @@ export class GameManager extends Component {
     }
 
     // 结合wasm，生成当前布局解法
-    onSolveButtonClicked() {
+    async onSolveButtonClicked() {
         if(this.inGuide) {
             return;
         }
@@ -794,10 +818,30 @@ export class GameManager extends Component {
         console.log(window["blocks"]);
         let blockStr = this.blocksToStr(window["blocks"]);
         console.log(blockStr);
-        this.solve(blockStr);
-        // 进入引导模式
-        //this.setCurState(GameState.STATE_GUIDE);
-        this.beginGuide(this.guideSteps);
+        try {
+            const result = await this.solve(blockStr);
+            console.log("solution:", result);
+            // 将求解器返回的字符串转换为 guideSteps 同构的数组
+            let steps: Array<{ block_id: number; delta: number }> | null = null;
+            try {
+                const parsed = JSON.parse(result);
+                if (Array.isArray(parsed)) {
+                    steps = parsed.map((s: any) => ({ block_id: Number(s.block_id), delta: Number(s.delta) }));
+                }
+            } catch (e) {
+                console.warn('parse solution failed, fallback to test steps');
+            }
+            // 进入引导模式
+            if (steps && steps.length > 0) {
+                this.beginGuide(steps);
+            } else {
+                this.beginGuide(this.guideSteps);
+            }
+        } catch (e) {
+            console.error("solve failed:", e);
+            // 失败时仍可用预置步骤进入引导
+            this.beginGuide(this.guideSteps);
+        }
 
     }
 
