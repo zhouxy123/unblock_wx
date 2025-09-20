@@ -1,4 +1,5 @@
-import { _decorator, Component, instantiate, Label, Node, Prefab, TextAsset, Scene, sys } from 'cc';
+import { _decorator, Component, instantiate, Label, Node, Prefab, TextAsset, Scene, sys, Vec3 } from 'cc';
+import Drag from './Drag';
 import { ConfettiController } from './ConfettiController';
 import "miniprogram-api-typings";
 
@@ -40,6 +41,7 @@ let confetti: number = 0;
 const BLOCK_SIZE: number = 180;
 const LEFT_BORDER: number = 90;
 const UP_BORDER: number = 890;
+const BOUNDING_BOX_POS: number = 140; // 调整边界框位置，用于guide模式
 
 window["blocks"] = blocks; // 目的：把blocks弄成全局变量
 window["total_state"] = total_state;
@@ -56,6 +58,15 @@ window["confetti"] = confetti;
 
 @ccclass('GameManager')
 export class GameManager extends Component {
+    // 引导模式数据
+    private guideSteps: Array<{ block_id: number; delta: number }> = 
+    //[{"block_id":7,"delta":-1},{"block_id":3,"delta":-1},{"block_id":4,"delta":-1},{"block_id":11,"delta":1},{"block_id":0,"delta":1}];
+    [{"block_id":8,"delta":1},{"block_id":3,"delta":-1},{"block_id":1,"delta":-1},{"block_id":11,"delta":-1},{"block_id":0,"delta":2}];
+    private guideIndex: number = 0;
+    private inGuide: boolean = false;
+    private guideCurrentMarker: Node | null = null;
+    private guideTargetMarker1: Node | null = null; // 较近端点
+    private guideTargetMarker2: Node | null = null; // 较远端点
 
     @property({ type: Node })
     public mainMenu : Node | null = null;
@@ -71,6 +82,12 @@ export class GameManager extends Component {
 
     @property({type: Prefab})
     public rowBlock3: Prefab|null = null;
+
+    @property({type: Prefab})
+    public boundingBox: Prefab|null = null;
+
+    @property({type: Prefab})
+    public dragGuide: Prefab|null = null;
 
     @property({type: Prefab})
     public colBlock3: Prefab|null = null;
@@ -228,6 +245,11 @@ export class GameManager extends Component {
         }
     }
 
+    onLoad() {
+        // 监听来自方块的完成移动事件
+        this.node.on('guide_move', this.onGuideMove, this);
+    }
+
     setCurState(value: GameState) {
         switch(value) {
             case GameState.STATE_INIT:
@@ -241,9 +263,246 @@ export class GameManager extends Component {
                 break;
             case GameState.STATE_GUIDE:
                 // 进入引导模式
-                console.log("guide mode");
+                console.log("enter guide mode ...");
+                this.inGuide = true;
+                // 如果已有解法步骤，则只解锁当前步骤对应的方块
+                if (this.guideSteps && this.guideSteps.length > 0) {
+                    const current = this.guideSteps[this.guideIndex];
+                    this.lockAllExcept(current.block_id);
+                    this.updateGuideMarkersForCurrentStep();
+                }
+                console.log("guide mode successful");
                 break;
         }
+    }
+
+    // 禁用指定 id 方块的 Drag 交互（若无 Drag 则暂停系统事件）
+    private lockBlockById(id: number) {
+        const children = this.node.children;
+        if (!children || id < 0 || id >= children.length) {
+            return;
+        }
+        const target = children[id];
+        if (!target) return;
+        // 优先禁用 Drag 组件
+        const dragOnSelf = target.getComponent(Drag);
+        if (dragOnSelf) {
+            dragOnSelf.enabled = false;
+        }
+        // 兼容 prefab 内部子节点绑定 Drag 的情况
+        const dragList = target.getComponentsInChildren(Drag);
+        if (dragList && dragList.length > 0) {
+            dragList.forEach(d => d.enabled = false);
+        }
+        // 兜底暂停系统事件，防止触摸继续派发
+        target.pauseSystemEvents(true);
+    }
+
+    // 解除指定 id 方块的 Drag 锁定，并恢复系统事件
+    private unlockBlockById(id: number) {
+        const children = this.node.children;
+        if (!children || id < 0 || id >= children.length) {
+            return;
+        }
+        const target = children[id];
+        if (!target) return;
+        // 恢复 Drag 组件
+        const dragOnSelf = target.getComponent(Drag);
+        if (dragOnSelf) {
+            dragOnSelf.enabled = true;
+        }
+        const dragList = target.getComponentsInChildren(Drag);
+        if (dragList && dragList.length > 0) {
+            dragList.forEach(d => d.enabled = true);
+        }
+        // 恢复系统事件
+        target.resumeSystemEvents(true);
+    }
+
+    // 只允许指定 id 的方块可交互，其余全部锁定
+    private lockAllExcept(allowedId: number) {
+        const children = this.node.children;
+        if (!children) return;
+        for (let i = 0; i < children.length; i++) {
+            if (i === allowedId) {
+                // 解锁允许的方块
+                this.unlockBlockById(i);
+            } else {
+                this.lockBlockById(i);
+            }
+        }
+    }
+
+    // 解锁全部方块
+    private unlockAllBlocks() {
+        const children = this.node.children;
+        if (!children) return;
+        for (let i = 0; i < children.length; i++) {
+            this.unlockBlockById(i);
+        }
+    }
+
+    // 外部开始引导：传入解法步骤数组 [{block_id, delta}, ...]
+    public beginGuide(steps: Array<{ block_id: number; delta: number }>) {
+        this.guideSteps = steps || [];
+        this.guideIndex = 0;
+        this.inGuide = true;
+        this.setCurState(GameState.STATE_GUIDE);
+    }
+
+    // 方块完成移动时的回调（由 Drag 派发）
+    private onGuideMove(payload: { blockId: number; delta: number }) {
+        console.log("onGuideMove: " + payload.blockId + " " + payload.delta);
+        if (!this.inGuide || !this.guideSteps || this.guideSteps.length === 0) return;
+        const cur = this.guideSteps[this.guideIndex];
+        if (!cur) return;
+        // 要求与当前步骤完全匹配（块 id 与步长）
+        //console.log("onGuideMove: " + payload.blockId + " " + payload.delta);
+        console.log("cur: " + cur.block_id + " " + cur.delta);
+        if (payload.blockId === cur.block_id && payload.delta === cur.delta) {
+            // 进入下一步
+            this.guideIndex++;
+            if (this.guideIndex >= this.guideSteps.length) {
+                // 完成引导
+                this.finishGuide();
+                return;
+            }
+            const next = this.guideSteps[this.guideIndex];
+            this.lockAllExcept(next.block_id);
+            this.updateGuideMarkersForCurrentStep();
+        } else {
+            // 不符合预期：保持当前锁定，不前进
+        }
+    }
+
+    private finishGuide() {
+        this.inGuide = false;
+        this.unlockAllBlocks();
+        this.clearGuideMarkers();
+        // 可选：切回 PLAYING 状态
+        this.setCurState(GameState.STATE_PLAYING);
+    }
+
+    private clearGuideMarkers() {
+        if (this.guideCurrentMarker) {
+            this.guideCurrentMarker.destroy();
+            this.guideCurrentMarker = null;
+        }
+        if (this.guideTargetMarker1) {
+            this.guideTargetMarker1.destroy();
+            this.guideTargetMarker1 = null;
+        }
+        if (this.guideTargetMarker2) {
+            this.guideTargetMarker2.destroy();
+            this.guideTargetMarker2 = null;
+        }
+    }
+
+    private ensureMarkers() {
+        const parent = this.node;
+        const needNewCurrent = !this.guideCurrentMarker || !this.guideCurrentMarker.isValid;
+        const needNewTarget1  = !this.guideTargetMarker1  || !this.guideTargetMarker1.isValid;
+        const needNewTarget2  = !this.guideTargetMarker2  || !this.guideTargetMarker2.isValid;
+      
+        if (needNewCurrent && this.dragGuide) {
+          this.guideCurrentMarker = instantiate(this.dragGuide);
+          parent.addChild(this.guideCurrentMarker);
+        }
+        if (needNewTarget1 && this.boundingBox) {
+          this.guideTargetMarker1 = instantiate(this.boundingBox); // 较近端点
+          parent.addChild(this.guideTargetMarker1);
+        }
+        if (needNewTarget2 && this.boundingBox) {
+          this.guideTargetMarker2 = instantiate(this.boundingBox); // 较远端点
+          parent.addChild(this.guideTargetMarker2);
+        }
+      }
+
+    private updateGuideMarkersForCurrentStep() {
+        if (!this.inGuide || !this.guideSteps || this.guideSteps.length === 0) {
+            this.clearGuideMarkers();
+            return;
+        }
+        const step = this.guideSteps[this.guideIndex];
+        const id = step.block_id;
+        const delta = step.delta;
+        const children = this.node.children;
+        if (!children || id < 0 || id >= children.length) return;
+        const targetNode = children[id];
+
+        // 确保标记存在
+        this.ensureMarkers();
+        //console.log("guideCurrentMarker: " + this.guideCurrentMarker);
+        //console.log("guideTargetMarker2: " + this.guideTargetMarker2);
+        if (!this.guideCurrentMarker || !this.guideTargetMarker1 || !this.guideTargetMarker2) return;
+        // 先重置为默认方向，避免上一轮旋转残留
+        this.guideCurrentMarker.setRotationFromEuler(0, 0, 0);
+        this.guideTargetMarker1.setRotationFromEuler(0, 0, 0);
+        this.guideTargetMarker2.setRotationFromEuler(0, 0, 0);
+
+        // 当前方块位置
+        // const curPos = targetNode.position.clone();
+        const cur_x_abs = window["abs_coords"][id][0];
+        const cur_y_abs = window["abs_coords"][id][1];
+        const curPos = new Vec3(cur_x_abs, cur_y_abs, 0);
+        this.guideCurrentMarker.setPosition(curPos);
+
+        // 计算目标位置（基于 delta 与方向）
+        const dir = window["blocks"][id][3]; // 0: 横向，1: 纵向
+        const len = window["blocks"][id][2]; // 块长
+        let tgtPos1 = curPos.clone();
+        let tgtPos2 = curPos.clone();
+        if (dir === 0 && delta > 0) { // 横向，向右
+            this.guideTargetMarker2.setRotationFromEuler(0, 0, 180);
+            if(len === 2) {
+                tgtPos1 = new Vec3(curPos.x + delta * BLOCK_SIZE - BOUNDING_BOX_POS, curPos.y, curPos.z);
+                tgtPos2 = new Vec3(curPos.x + delta * BLOCK_SIZE + BOUNDING_BOX_POS, curPos.y, curPos.z);
+            }
+            else {
+                tgtPos1 = new Vec3(curPos.x + delta * BLOCK_SIZE - BOUNDING_BOX_POS - (BLOCK_SIZE / 2), curPos.y, curPos.z);
+                tgtPos2 = new Vec3(curPos.x + delta * BLOCK_SIZE + BOUNDING_BOX_POS + (BLOCK_SIZE / 2), curPos.y, curPos.z);
+            }
+        } 
+        else if (dir === 0 && delta < 0) { // 横向，向左
+            this.guideCurrentMarker.setRotationFromEuler(0, 0, 180);
+            this.guideTargetMarker1.setRotationFromEuler(0, 0, 180);
+            if(len === 2) {
+                tgtPos1 = new Vec3(curPos.x + delta * BLOCK_SIZE + BOUNDING_BOX_POS, curPos.y, curPos.z);
+                tgtPos2 = new Vec3(curPos.x + delta * BLOCK_SIZE - BOUNDING_BOX_POS, curPos.y, curPos.z);
+            }
+            else {
+                tgtPos1 = new Vec3(curPos.x + delta * BLOCK_SIZE + BOUNDING_BOX_POS + (BLOCK_SIZE / 2), curPos.y, curPos.z);
+                tgtPos2 = new Vec3(curPos.x + delta * BLOCK_SIZE - BOUNDING_BOX_POS - (BLOCK_SIZE / 2), curPos.y, curPos.z);
+            }
+        }
+        else if (dir === 1 && delta < 0) { // 纵向，向上
+            this.guideTargetMarker1.setRotationFromEuler(0, 0, 90);
+            this.guideTargetMarker2.setRotationFromEuler(0, 0, 270);
+            this.guideCurrentMarker.setRotationFromEuler(0, 0, 90);
+            if(len === 2) {
+                tgtPos1 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE - BOUNDING_BOX_POS, curPos.z);
+                tgtPos2 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE + BOUNDING_BOX_POS, curPos.z);
+            }
+            else {
+                tgtPos1 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE - BOUNDING_BOX_POS - (BLOCK_SIZE / 2), curPos.z);
+                tgtPos2 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE + BOUNDING_BOX_POS + (BLOCK_SIZE / 2), curPos.z);
+            }
+        }
+        else if (dir === 1 && delta > 0) { // 纵向，向下
+            this.guideTargetMarker1.setRotationFromEuler(0, 0, 270);
+            this.guideTargetMarker2.setRotationFromEuler(0, 0, 90);
+            this.guideCurrentMarker.setRotationFromEuler(0, 0, 270);
+            if(len === 2) {
+                tgtPos1 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE + BOUNDING_BOX_POS, curPos.z);
+                tgtPos2 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE - BOUNDING_BOX_POS, curPos.z);
+            }
+            else {
+                tgtPos1 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE + BOUNDING_BOX_POS + (BLOCK_SIZE / 2), curPos.z);
+                tgtPos2 = new Vec3(curPos.x, curPos.y + (-delta) * BLOCK_SIZE - BOUNDING_BOX_POS - (BLOCK_SIZE / 2), curPos.z);
+            }
+        }
+        this.guideTargetMarker1.setPosition(tgtPos1);
+        this.guideTargetMarker2.setPosition(tgtPos2);
     }
 
     getProcess() {
@@ -279,10 +538,12 @@ export class GameManager extends Component {
     }
 
     generate(level: number) {
+        console.log("generate level: " + level);
         const data: string = this.itemGiftText.text;
         let i = 0;
         let j = (level - 1) * 64;
 
+        this.clearGuideMarkers();
         this.node.destroyAllChildren();
 
         window["blocks"] = [];
@@ -508,10 +769,10 @@ export class GameManager extends Component {
     }
 
     
-    async solve(blockStr: string): Promise<void> {
+    async solve(blockStr: string): Promise<string> {
         //const result: string = solve("022022214121102104213430");
         const result: string = solve(blockStr);
-        console.log('结果:', result);
+        return result;
     }
 
     /*async runSolver() {
@@ -525,6 +786,9 @@ export class GameManager extends Component {
 
     // 结合wasm，生成当前布局解法
     onSolveButtonClicked() {
+        if(this.inGuide) {
+            return;
+        }
         // 获取当前布局并适配rust求解器要求的输入格式
         console.log("solving...");
         console.log(window["blocks"]);
@@ -532,7 +796,9 @@ export class GameManager extends Component {
         console.log(blockStr);
         this.solve(blockStr);
         // 进入引导模式
-        this.setCurState(GameState.STATE_GUIDE);
+        //this.setCurState(GameState.STATE_GUIDE);
+        this.beginGuide(this.guideSteps);
+
     }
 
     spawnConfetti() {
