@@ -95,6 +95,9 @@ export default class Drag extends Component {
                        window["steps"]++;
 
                     this.updateState();
+                    if (this.node.parent) {
+                        this.node.parent.emit('guide_move', { blockId: this.blockID, delta: this.step });
+                    }
                     this.step = 0;
                     this.lock = 1;
                 }
@@ -110,6 +113,9 @@ export default class Drag extends Component {
                     if(this.step != 0) 
                         window["steps"]++;
                     this.updateState();
+                    if (this.node.parent) {
+                        this.node.parent.emit('guide_move', { blockId: this.blockID, delta: this.step });
+                    }
                     this.step = 0;
                     this.lock = 1;
                 }
@@ -130,6 +136,9 @@ export default class Drag extends Component {
                     if(this.step != 0) 
                         window["steps"]++;
                     this.updateState();
+                    if (this.node.parent) {
+                        this.node.parent.emit('guide_move', { blockId: this.blockID, delta: this.step });
+                    }
                     this.step = 0;
                     this.lock = 1;
                 }
@@ -145,6 +154,9 @@ export default class Drag extends Component {
                     if(this.step != 0) 
                         window["steps"]++;
                     this.updateState();
+                    if (this.node.parent) {
+                        this.node.parent.emit('guide_move', { blockId: this.blockID, delta: this.step });
+                    }
                     this.step = 0;
                     this.lock = 1;
                 }
@@ -174,6 +186,9 @@ export default class Drag extends Component {
             this.updateState();
             if(this.step != 0)
             window["steps"]++;
+            if (this.step != 0 && this.node.parent) {
+                this.node.parent.emit('guide_move', { blockId: this.blockID, delta: this.step });
+            }
         }
         
         this.lock = 1;
