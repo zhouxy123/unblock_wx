@@ -150,7 +150,7 @@ export class GameManager extends Component {
         // 初始化wasm
         try {
             await initWasm();
-            console.log("[OK] wasm init successful");
+            console.log("[OK] wasm init successful001");
         } catch (e) {
             console.error("[ERR] wasm init failed:", e);
         }

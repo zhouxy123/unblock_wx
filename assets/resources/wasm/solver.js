@@ -4,6 +4,8 @@ let WASM_VECTOR_LEN = 0;
 
 let cachedUint8ArrayMemory0 = null;
 
+console.log("1234567890");
+
 function getUint8ArrayMemory0() {
     if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
@@ -125,10 +127,50 @@ export function solve(input) {
  
 // 手动指定 WebAssembly 模块的路径
 const wasmModulePath = 'assets/resources/wasm/solver_bg.wasm';
- 
+
+function isWasmMagic(buf) {
+  const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return (
+    u8.length >= 4 &&
+    u8[0] === 0x00 &&
+    u8[1] === 0x61 && // 'a'
+    u8[2] === 0x73 && // 's'
+    u8[3] === 0x6d    // 'm'
+  );
+}
+
+function hexPreview(buf, n = 16) {
+  const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  const take = Math.min(n, u8.length);
+  return Array.from(u8.slice(0, take))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join(' ');
+}
+
+function peekHeader(path) {
+  const fs = wx.getFileSystemManager();
+  try {
+    const res = fs.readFileSync(path); // 返回 ArrayBuffer
+    const u8 = new Uint8Array(res);
+    console.log(`[WASM][peek] firstBytes= ${hexPreview(u8, 16)}`);
+    console.log(`[WASM][peek] magicOK= ${isWasmMagic(u8)}`);
+    const smoke = new Uint8Array([0x00,0x61,0x73,0x6d, 0x01,0x00,0x00,0x00]);
+    fs.writeFileSync(path, smoke.buffer);
+    return { u8, magicOK: isWasmMagic(u8) };
+  } catch (e) {
+    console.warn(`[WASM][peek] read fail: ${path}`, e);
+    return null;
+  }
+  
+  
+}
+
 async function instantiateArrayBuffer(binaryFile, imports) {
+    console.log("instant 11111");
+    peekHeader(wasmModulePath);
   return WXWebAssembly.instantiate(wasmModulePath, imports)
     .then(function(instance) {
+        console.log("line 133 successful");
       return instance;
     })
     .catch(function(reason) {
@@ -141,8 +183,10 @@ async function instantiateArrayBuffer(binaryFile, imports) {
 async function __wbg_load(module, imports) {
   if (typeof Response === 'function' && module instanceof Response) {
     const bytes = await module.arrayBuffer();
+    console.log("load 11111111");
     return await instantiateArrayBuffer(bytes, imports);
   } else {
+    console.log("load 22222222");
     return await instantiateArrayBuffer(module, imports);
   }
 }
@@ -228,7 +272,7 @@ async function __wbg_init(module_or_path) {
     }
 
     __wbg_init_memory(imports);
-
+    console.log("before wbg load...");
     const { instance, module } = await __wbg_load(await module_or_path, imports);
 
     return __wbg_finalize_init(instance, module);
