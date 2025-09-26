@@ -1,17 +1,26 @@
 /* tslint:disable */
 /* eslint-disable */
+export function alloc_input(len: number): number;
+export function input_len(): number;
+export function output_len(): number;
+export function take_output_i8(): Int8Array;
 export function solve(input: string): string;
+export function process_to_i8(): number;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly solve: (a: number, b: number) => [number, number];
-  readonly __wbindgen_export_0: WebAssembly.Table;
+  readonly alloc_input: (a: number) => number;
+  readonly input_len: () => number;
+  readonly output_len: () => number;
+  readonly take_output_i8: (a: number) => void;
+  readonly solve: (a: number, b: number, c: number) => void;
+  readonly process_to_i8: () => number;
+  readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_start: () => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

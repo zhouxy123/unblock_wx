@@ -1,10 +1,72 @@
 let wasm;
 
+/**
+ * @param {number} len
+ * @returns {number}
+ */
+export function alloc_input(len) {
+    const ret = wasm.alloc_input(len);
+    return ret >>> 0;
+}
+
+/**
+ * @returns {number}
+ */
+export function input_len() {
+    const ret = wasm.input_len();
+    return ret >>> 0;
+}
+
+/**
+ * @returns {number}
+ */
+export function output_len() {
+    const ret = wasm.output_len();
+    return ret >>> 0;
+}
+
+let cachedDataViewMemory0 = null;
+
+function getDataViewMemory0() {
+    if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
+        cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
+    }
+    return cachedDataViewMemory0;
+}
+
+let cachedInt8ArrayMemory0 = null;
+
+function getInt8ArrayMemory0() {
+    if (cachedInt8ArrayMemory0 === null || cachedInt8ArrayMemory0.byteLength === 0) {
+        cachedInt8ArrayMemory0 = new Int8Array(wasm.memory.buffer);
+    }
+    return cachedInt8ArrayMemory0;
+}
+
+function getArrayI8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getInt8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+/**
+ * @returns {Int8Array}
+ */
+export function take_output_i8() {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.take_output_i8(retptr);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var v1 = getArrayI8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 1, 1);
+        return v1;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
 let WASM_VECTOR_LEN = 0;
 
 let cachedUint8ArrayMemory0 = null;
-
-console.log("1234567890");
 
 function getUint8ArrayMemory0() {
     if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
@@ -83,18 +145,30 @@ export function solve(input) {
     let deferred2_0;
     let deferred2_1;
     try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.solve(ptr0, len0);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
+        wasm.solve(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred2_0 = r0;
+        deferred2_1 = r1;
+        return getStringFromWasm0(r0, r1);
     } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
         wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
 }
 
-/*async function __wbg_load(module, imports) {
+/**
+ * @returns {number}
+ */
+export function process_to_i8() {
+    const ret = wasm.process_to_i8();
+    return ret >>> 0;
+}
+/*
+async function __wbg_load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
         if (typeof WebAssembly.instantiateStreaming === 'function') {
             try {
@@ -124,50 +198,11 @@ export function solve(input) {
         }
     }
 }*/
- 
-// 手动指定 WebAssembly 模块的路径
+
 const wasmModulePath = 'assets/resources/wasm/solver_bg.wasm';
-
-function isWasmMagic(buf) {
-  const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
-  return (
-    u8.length >= 4 &&
-    u8[0] === 0x00 &&
-    u8[1] === 0x61 && // 'a'
-    u8[2] === 0x73 && // 's'
-    u8[3] === 0x6d    // 'm'
-  );
-}
-
-function hexPreview(buf, n = 16) {
-  const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
-  const take = Math.min(n, u8.length);
-  return Array.from(u8.slice(0, take))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join(' ');
-}
-
-function peekHeader(path) {
-  const fs = wx.getFileSystemManager();
-  try {
-    const res = fs.readFileSync(path); // 返回 ArrayBuffer
-    const u8 = new Uint8Array(res);
-    console.log(`[WASM][peek] firstBytes= ${hexPreview(u8, 16)}`);
-    console.log(`[WASM][peek] magicOK= ${isWasmMagic(u8)}`);
-    const smoke = new Uint8Array([0x00,0x61,0x73,0x6d, 0x01,0x00,0x00,0x00]);
-    fs.writeFileSync(path, smoke.buffer);
-    return { u8, magicOK: isWasmMagic(u8) };
-  } catch (e) {
-    console.warn(`[WASM][peek] read fail: ${path}`, e);
-    return null;
-  }
-  
-  
-}
 
 async function instantiateArrayBuffer(binaryFile, imports) {
     console.log("instant 11111");
-    peekHeader(wasmModulePath);
   return WXWebAssembly.instantiate(wasmModulePath, imports)
     .then(function(instance) {
         console.log("line 133 successful");
@@ -178,7 +213,6 @@ async function instantiateArrayBuffer(binaryFile, imports) {
       throw reason;
     });
 }
-
 
 async function __wbg_load(module, imports) {
   if (typeof Response === 'function' && module instanceof Response) {
@@ -191,20 +225,9 @@ async function __wbg_load(module, imports) {
   }
 }
 
-
 function __wbg_get_imports() {
     const imports = {};
     imports.wbg = {};
-    imports.wbg.__wbindgen_init_externref_table = function() {
-        const table = wasm.__wbindgen_export_0;
-        const offset = table.grow(4);
-        table.set(0, undefined);
-        table.set(offset + 0, undefined);
-        table.set(offset + 1, null);
-        table.set(offset + 2, true);
-        table.set(offset + 3, false);
-        ;
-    };
 
     return imports;
 }
@@ -216,10 +239,12 @@ function __wbg_init_memory(imports, memory) {
 function __wbg_finalize_init(instance, module) {
     wasm = instance.exports;
     __wbg_init.__wbindgen_wasm_module = module;
+    cachedDataViewMemory0 = null;
+    cachedInt8ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
 
 
-    wasm.__wbindgen_start();
+
     return wasm;
 }
 
@@ -262,17 +287,18 @@ async function __wbg_init(module_or_path) {
 
     if (typeof module_or_path === 'undefined') {
         //module_or_path = new URL('solver_bg.wasm', import.meta.url);
-        module_or_path =  wasmModulePath;
+        module_or_path = wasmModulePath;
     }
     const imports = __wbg_get_imports();
 
     if (typeof module_or_path === 'string' || (typeof Request === 'function' && module_or_path instanceof Request) || (typeof URL === 'function' && module_or_path instanceof URL)) {
         //module_or_path = fetch(module_or_path);
-        module_or_path =  wasmModulePath;
+        module_or_path = wasmModulePath;
     }
+    
 
     __wbg_init_memory(imports);
-    console.log("before wbg load...");
+
     const { instance, module } = await __wbg_load(await module_or_path, imports);
 
     return __wbg_finalize_init(instance, module);
