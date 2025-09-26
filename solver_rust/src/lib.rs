@@ -1,5 +1,6 @@
 mod utils;
 
+use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{self, Write};
@@ -19,6 +20,38 @@ struct Block {
 struct MoveRecord {
     block_id: i32,
     delta: i32,
+}
+
+thread_local! {
+    // 输入/输出缓冲区，放在线程本地，便于长生命周期管理
+    static IN_BUF:  RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static OUT_BUF: RefCell<Vec<i8>> = RefCell::new(Vec::new());
+}
+
+// 为 JS 准备一块大小为len的可写的连续内存，返回指针
+#[wasm_bindgen]
+pub fn alloc_input(len: usize) -> *mut u8 {
+    IN_BUF.with(|b| {
+        let mut v = b.borrow_mut();
+        v.clear();
+        v.resize(len, 0); // 分配并填 0，返回可写指针
+        v.as_mut_ptr()
+    })
+}
+
+#[wasm_bindgen]
+pub fn input_len() -> usize {
+    IN_BUF.with(|b| b.borrow().len())
+}
+
+#[wasm_bindgen]
+pub fn output_len() -> usize {
+    OUT_BUF.with(|b| b.borrow().len())
+}
+
+#[wasm_bindgen]
+pub fn take_output_i8() -> Vec<i8> {
+    OUT_BUF.with(|b| b.replace(Vec::new()))
 }
 
 #[wasm_bindgen]
@@ -193,6 +226,7 @@ fn solve_puzzle(init_blocks: &Vec<Block>) -> Option<Vec<MoveRecord>> {
 
 #[wasm_bindgen]
 pub fn solve(input: &str) -> String{
+    // 目标：改成输入输出都是数组，从而在wasm中调用
     match parse_blocks(input) {
         Some(blocks) => {
             match solve_puzzle(&blocks) {
@@ -202,4 +236,22 @@ pub fn solve(input: &str) -> String{
         },
         None => "invalid input".to_string(),
     }
+}
+
+#[wasm_bindgen]
+pub fn process_to_i8() -> *const i8 {
+    OUT_BUF.with(|out| {
+        IN_BUF.with(|inp| {
+            let inp = inp.borrow();
+            let mut o = out.borrow_mut();
+            o.clear();
+            o.reserve(inp.len());
+            for &x in inp.iter() {
+                // 这里换成你的真实算法：把 u8 转换/映射到 i8
+                let val: i8 = (x as i16 - 128) as i8; // 示例：中心化
+                o.push(val);
+            }
+            o.as_ptr()
+        })
+    })
 }
