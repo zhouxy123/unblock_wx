@@ -5,7 +5,9 @@ import "miniprogram-api-typings";
 
 // initWasm: 从../resources/wasm/solver.js中默认导出，对应export default function  
 // {solve}: 必须与solver.js中对应函数名一致
-import initWasm, {solve} from "../resources/wasm/solver.js";
+//import initWasm, {solve, alloc_input, input_len, process_to_i8, output_len} from "../resources/wasm/solver.js";
+import initWasm from "../resources/wasm/solver.js";
+//import {memory} from "../resources/wasm/solver.js";
 
 const { ccclass, property } = _decorator;
 
@@ -15,6 +17,17 @@ enum GameState {
     STATE_END,
     STATE_GUIDE,
 };
+
+type WasmAPI = {
+  memory: WXWebAssembly.Memory;
+  alloc_input(len: number): number;
+  input_len(): number;
+  process_to_i8(): number;
+  output_len(): number;
+  solve?(...args: any[]): any;
+};
+
+let wasm: WasmAPI | null = null;
 
 let blocks: number[][] = [];
 let total_state: number[][] = 
@@ -149,8 +162,10 @@ export class GameManager extends Component {
 
         // 初始化wasm
         try {
-            await initWasm();
-            console.log("[OK] wasm init successful001");
+            //await initWasm();
+            wasm = await initWasm();
+            const { memory, solve, alloc_input, input_len, process_to_i8, output_len } = wasm;
+            console.log("[OK] wasm init successful001 ");
         } catch (e) {
             console.error("[ERR] wasm init failed:", e);
         }
@@ -795,8 +810,41 @@ export class GameManager extends Component {
     
     async solve(blockStr: string): Promise<string> {
         //const result: string = solve("022022214121102104213430");
-        const result: string = solve(blockStr);
-        return result;
+        //const result: string = solve(blockStr);
+        // 初始化wasm
+        try {
+            //await initWasm();
+            //const wasm = await initWasm();
+            //const { memory, solve, alloc_input, input_len, process_to_i8, output_len } = wasm;
+            //console.log("[OK] wasm init successful001 ");
+            const result: string = "";
+            const ptr = wasm.alloc_input(8);
+            const len = wasm.input_len();
+            const view = new Uint8Array(wasm.memory.buffer, ptr, len);
+            view.set([10,11,12,13,14,15,16,17]);
+            const outPtr = wasm.process_to_i8();
+            const outLen = wasm.output_len();
+            const outView = new Int8Array(wasm.memory.buffer, outPtr, outLen);
+            console.log("输出数组:",Array.from(outView));
+        } catch (e) {
+            console.error("[ERR] wasm init failed:", e);
+        }
+
+        //const result: string = "";
+        //const ptr = alloc_input(8);
+        //const len = input_len();
+
+        // 在 glue 生成的包里，通常 memory 也会导出
+        
+        // 或者 glue 会自动 re-export memory，你可以直接 import { memory } 
+
+        //const view = new Uint8Array(memory.buffer, ptr, len);
+        //view.set([10,11,12,13,14,15,16,17]);
+
+        //process_to_i8();
+        //const outLen = output_len();
+        return "";
+
     }
 
     /*async runSolver() {
