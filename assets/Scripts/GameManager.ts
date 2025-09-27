@@ -24,7 +24,8 @@ type WasmAPI = {
   input_len(): number;
   process_to_i8(): number;
   output_len(): number;
-  solve?(...args: any[]): any;
+  output_ptr(): number;
+  solve(): boolean;
 };
 
 let wasm: WasmAPI | null = null;
@@ -164,7 +165,7 @@ export class GameManager extends Component {
         try {
             //await initWasm();
             wasm = await initWasm();
-            const { memory, solve, alloc_input, input_len, process_to_i8, output_len } = wasm;
+            const { memory, solve, alloc_input, input_len, process_to_i8, output_len, output_ptr } = wasm;
             console.log("[OK] wasm init successful001 ");
         } catch (e) {
             console.error("[ERR] wasm init failed:", e);
@@ -808,42 +809,30 @@ export class GameManager extends Component {
     }
 
     
-    async solve(blockStr: string): Promise<string> {
+    async solve(blocks: number[][]): Promise<number[]> {
         //const result: string = solve("022022214121102104213430");
         //const result: string = solve(blockStr);
         // 初始化wasm
+        const blockArr = blocks.reduce((acc, row) => acc.concat(row), [] as number[]);
+        const bytes = Uint8Array.from(blockArr); 
+        let result: number[] = [];
         try {
-            //await initWasm();
-            //const wasm = await initWasm();
-            //const { memory, solve, alloc_input, input_len, process_to_i8, output_len } = wasm;
-            //console.log("[OK] wasm init successful001 ");
-            const result: string = "";
-            const ptr = wasm.alloc_input(8);
+            const ptr = wasm.alloc_input(bytes.length);
             const len = wasm.input_len();
-            const view = new Uint8Array(wasm.memory.buffer, ptr, len);
-            view.set([10,11,12,13,14,15,16,17]);
-            const outPtr = wasm.process_to_i8();
+            const inView = new Uint8Array(wasm.memory.buffer, ptr, len);
+            inView.set(bytes);
+            const solution = wasm.solve();
+            const outPtr = wasm.output_ptr();
             const outLen = wasm.output_len();
             const outView = new Int8Array(wasm.memory.buffer, outPtr, outLen);
-            console.log("输出数组:",Array.from(outView));
+            result = Array.from(outView);
+
+            // 将outView转成可用格式
+            console.log("solution:", result);
         } catch (e) {
             console.error("[ERR] wasm init failed:", e);
         }
-
-        //const result: string = "";
-        //const ptr = alloc_input(8);
-        //const len = input_len();
-
-        // 在 glue 生成的包里，通常 memory 也会导出
-        
-        // 或者 glue 会自动 re-export memory，你可以直接 import { memory } 
-
-        //const view = new Uint8Array(memory.buffer, ptr, len);
-        //view.set([10,11,12,13,14,15,16,17]);
-
-        //process_to_i8();
-        //const outLen = output_len();
-        return "";
+        return result;
 
     }
 
@@ -856,6 +845,17 @@ export class GameManager extends Component {
         return blockStr;
     }
 
+    parseMoves(arr: number[]): { block_id: number; delta: number }[] {
+        const result: { block_id: number; delta: number }[] = [];
+        for (let i = 0; i < arr.length; i += 2) {
+          result.push({
+            block_id: arr[i],
+            delta: arr[i + 1],
+          });
+        }
+        return result;
+      }
+
     // 结合wasm，生成当前布局解法
     async onSolveButtonClicked() {
         if(this.inGuide) {
@@ -864,18 +864,16 @@ export class GameManager extends Component {
         // 获取当前布局并适配rust求解器要求的输入格式
         console.log("solving...");
         console.log(window["blocks"]);
-        let blockStr = this.blocksToStr(window["blocks"]);
-        console.log(blockStr);
+        //let blockStr = this.blocksToStr(window["blocks"]);
+        //let blockArr = window["blocks"].flat();
+        //console.log(blockArr);
         try {
-            const result = await this.solve(blockStr);
+            const result = await this.solve(window["blocks"]);
             console.log("solution:", result);
             // 将求解器返回的字符串转换为 guideSteps 同构的数组
             let steps: Array<{ block_id: number; delta: number }> | null = null;
             try {
-                const parsed = JSON.parse(result);
-                if (Array.isArray(parsed)) {
-                    steps = parsed.map((s: any) => ({ block_id: Number(s.block_id), delta: Number(s.delta) }));
-                }
+                steps = this.parseMoves(result);
             } catch (e) {
                 console.warn('parse solution failed, fallback to test steps');
             }
