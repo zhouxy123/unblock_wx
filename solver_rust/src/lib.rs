@@ -45,6 +45,11 @@ pub fn input_len() -> usize {
 }
 
 #[wasm_bindgen]
+pub fn output_ptr() -> *const i8 {
+    OUT_BUF.with(|b| b.borrow().as_ptr())
+}
+
+#[wasm_bindgen]
 pub fn output_len() -> usize {
     OUT_BUF.with(|b| b.borrow().len())
 }
@@ -80,8 +85,47 @@ pub fn parse_blocks(input: &str) -> Option<Vec<Block>> {
     Some(blocks)
 }
 
+pub fn parse_blocks_from_inbuf() -> Option<Vec<Block>> {
+    IN_BUF.with(|buf| {
+        let buf = buf.borrow();
+        if buf.len() % 4 != 0 {
+            return None;
+        }
+
+        let mut blocks = Vec::new();
+        for i in 0..(buf.len() / 4) {
+            let id = i as i32;
+            let x = buf[i * 4] as i32;
+            let y = buf[i * 4 + 1] as i32;
+            let length = buf[i * 4 + 2] as i32;
+            let direction = if buf[i * 4 + 3] == 0 { 'h' } else { 'v' };
+
+            blocks.push(Block { id, x, y, length, direction });
+        }
+
+        Some(blocks)
+    })
+}
+
 fn format_moves_json(moves: &Vec<MoveRecord>) -> String {
     serde_json::to_string(moves).unwrap_or("[]".to_string())
+}
+
+fn write_moves_to_outbuf_i8(moves: &[MoveRecord]) -> (*const i8, usize) {
+    OUT_BUF.with(|out| {
+        let mut o = out.borrow_mut();
+        o.clear();
+        o.reserve(moves.len() * 2);
+        for m in moves {
+            // 可改为：let bid: i8 = m.block_id.try_into().expect("block_id out of i8");
+            //        let d  : i8 = m.delta   .try_into().expect("delta out of i8");
+            let bid = m.block_id as i8;
+            let d   = m.delta    as i8;
+            o.push(bid);
+            o.push(d);
+        }
+        (o.as_ptr(), o.len())
+    })
 }
 
 fn encode_state(blocks: &Vec<Block>) -> String {
@@ -225,17 +269,21 @@ fn solve_puzzle(init_blocks: &Vec<Block>) -> Option<Vec<MoveRecord>> {
 }
 
 #[wasm_bindgen]
-pub fn solve(input: &str) -> String{
+//pub fn solve() -> String{
+pub fn solve() -> bool {
     // 目标：改成输入输出都是数组，从而在wasm中调用
-    match parse_blocks(input) {
-        Some(blocks) => {
-            match solve_puzzle(&blocks) {
-                Some(moves) => format_moves_json(&moves),
-                None => "".to_string(), // 无解返回空字符串
-            }
-        },
-        None => "invalid input".to_string(),
+    /*
+    1. 将parse_blocks改为读取从IN_BUF中读取数组，再转成blocks，此时不需要input: &str参数
+    2. 将format_moves_json(&moves)改为将得出的求解步骤转成i8数组，之后写入OUT_BUF
+    */
+    //match parse_blocks(input) {
+    if let Some(blocks) = parse_blocks_from_inbuf() {
+        if let Some(moves) = solve_puzzle(&blocks) {
+            write_moves_to_outbuf_i8(&moves); // 忽略返回也行
+            return true;
+        }
     }
+    false
 }
 
 #[wasm_bindgen]
